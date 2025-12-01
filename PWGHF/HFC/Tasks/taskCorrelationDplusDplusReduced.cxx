@@ -10,7 +10,7 @@
 // or submit itself to any jurisdiction.
 
 /// \file TaskCorrelationDplusDplusReduced.cxx
-/// \brief Writer of D+ → π+ K- π+ candidates in the form of flat tables to be stored in TTrees.
+/// \brief Writer of pairs of D mesons candidates in the form of flat tables to be stored in TTrees.
 ///        Intended for debug, local optimization of analysis on small samples or ML training.
 ///        In this file are defined and filled the output tables
 ///
