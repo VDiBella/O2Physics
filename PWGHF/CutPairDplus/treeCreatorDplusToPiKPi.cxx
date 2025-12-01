@@ -99,8 +99,6 @@ struct HfTreeCreatorDplusToPiKPi {
     ccdb->setCaching(true);
     ccdb->setLocalObjectValidityChecking();
 
-    //zorro.setBaseCCDBPath("Users/m/mpuccio/EventFiltering/OTS/");
-
     if (cfgSkimmedProcessing) {
       zorroSummary.setObject(zorro.getZorroSummary());
     }
@@ -300,18 +298,11 @@ struct HfTreeCreatorDplusToPiKPi {
           zorro.initCCDB(ccdb.service, runNumber, currentTimestamp, "fHfDoubleCharm3P");
           zorro.populateHistRegistry(registry, runNumber);
         }
-	/*
-        if (!zorro.isSelected(bc.globalBC())) {
-          continue;
-        }
-	*/
 	zorro.isSelected(bc.globalBC());
       }
 
       fillEvent(collision);
       const auto colId = collision.globalIndex();
-      // auto localId = rowCandidateFullEvents.lastIndex();
-      // LOG(info) << "Last local index: "<<localId<<"  Global collision index: "<<colId;
       auto candidatesInThisCollision = candidates.sliceBy(tracksPerCollision, colId);
       for (const auto& candidate : candidatesInThisCollision) {
         fillCandidateTable<aod::Collisions>(candidate, colId);
