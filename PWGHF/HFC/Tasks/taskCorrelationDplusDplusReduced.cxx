@@ -22,7 +22,7 @@
 #include "PWGHF/Core/DecayChannels.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 
-#include "PWGHF/CutPairDplus/DplusPairCut.h"
+#include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
 
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"

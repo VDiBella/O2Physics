@@ -24,7 +24,7 @@
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 
-#include "PWGHF/CutPairDplus/DplusPairCut.h"
+#include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
 
 #include "Common/Core/RecoDecay.h"
 #include "Common/DataModel/Centrality.h"
