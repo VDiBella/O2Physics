@@ -9,11 +9,13 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file treeReaderDplusToPiKPi.cxx
+/// \file TaskCorrelationDplusDplusReduced.cxx
 /// \brief Writer of D+ → π+ K- π+ candidates in the form of flat tables to be stored in TTrees.
 ///        Intended for debug, local optimization of analysis on small samples or ML training.
 ///        In this file are defined and filled the output tables
 ///
+/// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
+/// \author Iouri BELIKOV <jouri.belikov@cern.ch>, IPHC Strasbourg 
 /// \author Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
 
 #include "PWGHF/Core/CentralityEstimation.h"
@@ -44,20 +46,19 @@ struct HfTreeReaderDplusToPiKPi {
   {
     registry.add("hMassDplus", "D+ candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
     registry.add("hMassDplusMatched", "D+ matched candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
-    registry.add("hMassDplusDminus", "D+D- pair candidates;inv. mass (#pi K) (GeV/#it{c}^{2});inv. mass (#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDMesonPair", "D Meson pair candidates;inv. mass (#pi K) (GeV/#it{c}^{2});inv. mass (#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
   }
 
   void processLocalData(o2::aod::HfCandDpFullEvs::iterator const& localCollision,
                         SelectedCandidates const& localCandidates)
   {
-    // LOG(info) << "BC: " << localCollision.bcId() << "  #cand: " << localCandidates.size();
     registry.fill(HIST("hNCand"), localCandidates.size());
 
     for (const auto& cand1 : localCandidates) {
       auto mass1 = cand1.m();
       for (auto cand2 = cand1 + 1; cand2 != localCandidates.end(); ++cand2) {
         auto mass2 = cand2.m();
-        registry.fill(HIST("hMassDplusDminus"), mass2, mass1);
+        registry.fill(HIST("hMassDMesonPair"), mass2, mass1);
       }
     }
   }

@@ -9,11 +9,13 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file treeCreatorDplusToPiKPi.cxx
+/// \file CorrelatorDplusDplusReduced.cxx
 /// \brief Writer of D+ → π+ K- π+ candidates in the form of flat tables to be stored in TTrees.
 ///        Intended for debug, local optimization of analysis on small samples or ML training.
 ///        In this file are defined and filled the output tables
 ///
+/// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
+/// \author Iouri BELIKOV <jouri.belikov@cern.ch>, IPHC Strasbourg 
 /// \author Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
 
 #include "PWGHF/Core/CentralityEstimation.h"
