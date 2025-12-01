@@ -17,9 +17,11 @@
 
 #include "PWGCF/Core/CorrelationContainer.h"
 #include "PWGCF/Core/PairCuts.h"
-#include "PWGCF/TwoParticleCorrelations/DataModel/longrangeDerived.h"
+#include "PWGCF/TwoParticleCorrelations/DataModel/LongRangeDerived.h"
 #include "PWGLF/DataModel/LFStrangenessTables.h"
 #include "PWGMM/Mult/DataModel/bestCollisionTable.h"
+#include "PWGUD/Core/SGSelector.h"
+#include "PWGUD/Core/UPCHelpers.h"
 
 #include "Common/Core/RecoDecay.h"
 #include "Common/Core/TrackSelection.h"
@@ -30,8 +32,9 @@
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/FT0Corrected.h"
 #include "Common/DataModel/Multiplicity.h"
-#include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/PIDResponseITS.h"
+#include "Common/DataModel/PIDResponseTOF.h"
+#include "Common/DataModel/PIDResponseTPC.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 
 #include "CCDB/BasicCCDBManager.h"
@@ -67,7 +70,10 @@ using namespace o2::aod::fwdtrack;
 using namespace o2::aod::evsel;
 using namespace o2::constants::math;
 
-auto static constexpr kMinFt0cCell = 96;
+auto static constexpr KminFt0cCell = 96;
+auto static constexpr PionTrackN = 1;
+auto static constexpr KaonTrackN = 2;
+auto static constexpr ProtonTrackN = 3;
 AxisSpec axisEvent{15, 0.5, 15.5, "#Event", "EventAxis"};
 
 enum KindOfParticles {
@@ -89,6 +95,9 @@ struct LongrangeMaker {
   } cfgCcdbParam;
 
   struct : ConfigurableGroup {
+    Configurable<bool> isApplyTrigTvx{"isApplyTrigTvx", false, "Enable Ft0a and Ft0c coincidence"};
+    Configurable<bool> isApplyTfborder{"isApplyTfborder", false, "Enable TF border cut"};
+    Configurable<bool> isApplyItsRofborder{"isApplyItsRofborder", false, "Enable ITS ROF border cut"};
     Configurable<bool> isApplySameBunchPileup{"isApplySameBunchPileup", false, "Enable SameBunchPileup cut"};
     Configurable<bool> isApplyGoodZvtxFT0vsPV{"isApplyGoodZvtxFT0vsPV", false, "Enable GoodZvtxFT0vsPV cut"};
     Configurable<bool> isApplyGoodITSLayersAll{"isApplyGoodITSLayersAll", false, "Enable GoodITSLayersAll cut"};
@@ -101,6 +110,8 @@ struct LongrangeMaker {
     Configurable<bool> isApplyCentFT0C{"isApplyCentFT0C", false, "Centrality based on FT0C"};
     Configurable<bool> isApplyCentFV0A{"isApplyCentFV0A", false, "Centrality based on FV0A"};
     Configurable<bool> isApplyCentFT0M{"isApplyCentFT0M", false, "Centrality based on FT0A + FT0C"};
+    Configurable<bool> isApplyOccuSelection{"isApplyOccuSelection", false, "Enable occupancy selection"};
+    Configurable<int> cfgOccuCut{"cfgOccuCut", 1000, "Occupancy selection"};
   } cfgevtsel;
 
   struct : ConfigurableGroup {
@@ -157,7 +168,6 @@ struct LongrangeMaker {
   Configurable<float> cfgTofPidPtCut{"cfgTofPidPtCut", 0.3f, "Minimum pt to use TOF N-sigma"};
   Configurable<bool> isUseItsPid{"isUseItsPid", false, "Use ITS PID for particle identification"};
 
-  SliceCache cache;
   Service<o2::ccdb::BasicCCDBManager> ccdb;
   Service<o2::framework::O2DatabasePDG> pdg;
   o2::ccdb::CcdbApi ccdbApi;
@@ -170,6 +180,13 @@ struct LongrangeMaker {
   std::vector<double> itsNsigmaCut;
   std::vector<double> tpcNsigmaCut;
   o2::aod::ITSResponse itsResponse;
+
+  // Create instance of the selector class which runs the gap selection algorithm
+  SGSelector sgSelector;
+  // Create instance of cut holder class to contain the user defined cuts
+  SGCutParHolder cfgSgCuts = SGCutParHolder();
+  Configurable<SGCutParHolder> sgCuts{"sgCuts", {}, "SG event cuts"};
+  Configurable<int> cfgGapSide{"cfgGapSide", 2, "cut on UPC events"};
 
   void init(InitContext&)
   {
@@ -187,16 +204,22 @@ struct LongrangeMaker {
     auto hstat = histos.get<TH1>(HIST("EventHist"));
     auto* x = hstat->GetXaxis();
     x->SetBinLabel(1, "All events");
-    x->SetBinLabel(2, "Sel8");
-    x->SetBinLabel(3, "ApplySameBunchPileup");
-    x->SetBinLabel(4, "ApplyGoodZvtxFT0vsPV");
-    x->SetBinLabel(5, "ApplyGoodITSLayersAll");
-    x->SetBinLabel(6, "ApplyExtraCorrCut");
-    x->SetBinLabel(7, "ApplyNoCollInTimeRangeStandard");
-    x->SetBinLabel(8, "ApplyNoCollInRofStandard");
-    x->SetBinLabel(9, "ApplyNoHighMultCollInPrevRof");
+    x->SetBinLabel(2, "Apply TriggerTVX");
+    x->SetBinLabel(3, "Apply TF Border");
+    x->SetBinLabel(4, "Apply ITS ROF Border");
+    x->SetBinLabel(5, "ApplySameBunchPileup");
+    x->SetBinLabel(6, "ApplyGoodZvtxFT0vsPV");
+    x->SetBinLabel(7, "ApplyGoodITSLayersAll");
+    x->SetBinLabel(8, "ApplyExtraCorrCut");
+    x->SetBinLabel(9, "ApplyNoCollInTimeRangeStandard");
+    x->SetBinLabel(10, "ApplyNoCollInRofStandard");
+    x->SetBinLabel(11, "ApplyNoHighMultCollInPrevRof");
+    x->SetBinLabel(12, "ApplyOccupancySelection");
+    histos.add("hSelectionResult", "hSelectionResult", kTH1I, {{5, -0.5, 4.5}});
 
     myTrackFilter = getGlobalTrackSelectionRun3ITSMatch(TrackSelection::GlobalTrackRun3ITSMatching::Run3ITSibAny, TrackSelection::GlobalTrackRun3DCAxyCut::Default);
+    myTrackFilter.SetPtRange(cfgtrksel.cfgPtCutMin, cfgtrksel.cfgPtCutMax);
+    myTrackFilter.SetEtaRange(-cfgtrksel.cfgEtaCut, cfgtrksel.cfgEtaCut);
     myTrackFilter.SetMinNCrossedRowsTPC(cfgtrksel.minNCrossedRowsTPC);
     myTrackFilter.SetMinNClustersTPC(cfgtrksel.minTPCNClsFound);
     myTrackFilter.SetMaxDcaZ(cfgtrksel.maxDcaZ);
@@ -206,53 +229,65 @@ struct LongrangeMaker {
     tofNsigmaCut = tofNsigmaPidCut;
     itsNsigmaCut = itsNsigmaPidCut;
     tpcNsigmaCut = tpcNsigmaPidCut;
+
+    cfgSgCuts = (SGCutParHolder)sgCuts;
   }
 
-  Produces<aod::CollLRTable> collisionLRTable;
-  Produces<aod::TrkLRTable> tracksLRTable;
-  Produces<aod::Ft0aLRTable> ft0aLRTable;
-  Produces<aod::Ft0cLRTable> ft0cLRTable;
-  Produces<aod::MftTrkLRTable> mftLRTable;
-  Produces<aod::V0TrkLRTable> v0LRTable;
+  Produces<aod::CollLRTables> collisionLRTable;
+  Produces<aod::TrkLRTables> tracksLRTable;
+  Produces<aod::Ft0aLRTables> ft0aLRTable;
+  Produces<aod::Ft0cLRTables> ft0cLRTable;
+  Produces<aod::MftTrkLRTables> mftLRTable;
+  Produces<aod::MftBestTrkLRTables> mftbestLRTable;
+  Produces<aod::V0TrkLRTables> v0LRTable;
+
+  Produces<aod::UpcCollLRTables> outupccol;
+  Produces<aod::UpcSgCollLRTables> outsgupccol;
+  Produces<aod::ZdcLRTables> outzdctable;
+
+  Produces<aod::TrkLRUpcTables> tracksLRUpcTable;
+  Produces<aod::Ft0aLRUpcTables> ft0aLRUpcTable;
+  Produces<aod::Ft0cLRUpcTables> ft0cLRUpcTable;
+  Produces<aod::MftTrkLRUpcTables> mftLRUpcTable;
+  Produces<aod::MftBestTrkLRUpcTables> mftbestLRUpcTable;
+  Produces<aod::V0TrkLRUpcTables> v0LRUpcTable;
 
   Filter fTracksEta = nabs(aod::track::eta) < cfgtrksel.cfgEtaCut;
   Filter fTracksPt = (aod::track::pt > cfgtrksel.cfgPtCutMin) && (aod::track::pt < cfgtrksel.cfgPtCutMax);
-  Filter fMftTrackColID = (aod::fwdtrack::bestCollisionId >= 0);
-  Filter fMftTrackDca = (nabs(aod::fwdtrack::bestDCAXY) < cfgmfttrksel.cfigMftDcaxy);
 
   using CollTable = soa::Join<aod::Collisions, aod::EvSels, aod::Mults, aod::CentFT0Cs, aod::CentFV0As, aod::CentFT0Ms>;
   using TrksTable = soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection, aod::pidTPCFullPi, aod::pidTPCFullKa, aod::pidTPCFullPr, aod::pidTOFbeta, aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr>>;
-  using MftTrkTable = soa::Filtered<aod::MFTTracks>;
+  using MftTrkTable = aod::MFTTracks;
+  using BCs = soa::Join<aod::BCsWithTimestamps, aod::BcSels, aod::Run3MatchedToBCSparse>;
 
-  Preslice<TrksTable> perColGlobal = aod::track::collisionId;
-  Preslice<MftTrkTable> perColMft = aod::fwdtrack::collisionId;
-  Preslice<aod::V0Datas> perColV0 = aod::v0data::collisionId;
-
-  void process(CollTable::iterator const& col, TrksTable const& tracks, aod::FT0s const&, MftTrkTable const& mfttracks, aod::V0Datas const& V0s)
+  void processData(CollTable::iterator const& col, TrksTable const& tracks,
+                   aod::FT0s const&, MftTrkTable const& mfttracks,
+                   soa::SmallGroups<aod::BestCollisionsFwd> const& retracks,
+                   aod::V0Datas const& V0s, aod::BCsWithTimestamps const&)
   {
     if (!isEventSelected(col)) {
       return;
     }
-    auto tracksInCollision = tracks.sliceBy(perColGlobal, col.globalIndex());
-    auto multiplicity = countNTracks(tracksInCollision);
+
+    auto multiplicity = countNTracks(tracks);
     auto centrality = selColCent(col);
     auto bc = col.bc_as<aod::BCsWithTimestamps>();
 
     collisionLRTable(bc.runNumber(), col.posZ(), multiplicity, centrality, bc.timestamp());
 
     // track loop
-    for (const auto& track : tracksInCollision) {
+    for (const auto& track : tracks) {
       if (!track.isGlobalTrack())
         continue;
       if (!myTrackFilter.IsSelected(track))
         continue;
-      tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::LRCorrTrkTable::kSpCharge);
-      if (getTrackPID(track) == 1)
-        tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::LRCorrTrkTable::kSpPion);
-      if (getTrackPID(track) == 2)
-        tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::LRCorrTrkTable::kSpKaon);
-      if (getTrackPID(track) == 3)
-        tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::LRCorrTrkTable::kSpProton);
+      tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpCharge);
+      if (getTrackPID(track) == PionTrackN)
+        tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpPion);
+      if (getTrackPID(track) == KaonTrackN)
+        tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpKaon);
+      if (getTrackPID(track) == ProtonTrackN)
+        tracksLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpProton);
     }
 
     // ft0 loop
@@ -275,8 +310,7 @@ struct LongrangeMaker {
     }
 
     // mft loop
-    auto mfttracksInCollision = mfttracks.sliceBy(perColMft, col.globalIndex());
-    for (const auto& track : mfttracksInCollision) {
+    for (const auto& track : mfttracks) {
       if (!isMftTrackSelected(track))
         continue;
       auto phi = track.phi();
@@ -284,9 +318,23 @@ struct LongrangeMaker {
       mftLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), phi);
     }
 
+    if (retracks.size() > 0) {
+      for (const auto& retrack : retracks) {
+        if (std::abs(retrack.bestDCAXY()) > cfgmfttrksel.cfigMftDcaxy) {
+          continue; // does not point to PV properly
+        }
+        auto track = retrack.mfttrack();
+        if (!isMftTrackSelected(track)) {
+          continue;
+        }
+        auto phi = track.phi();
+        o2::math_utils::bringTo02Pi(phi);
+        mftbestLRTable(collisionLRTable.lastIndex(), track.pt(), track.eta(), phi);
+      }
+    }
+
     // v0 loop
-    auto v0tracksInCollision = V0s.sliceBy(perColV0, col.globalIndex());
-    for (const auto& v0 : v0tracksInCollision) {
+    for (const auto& v0 : V0s) {
       if (!isSelectV0Track(v0)) { // Quality selection for V0 prongs
         continue;
       }
@@ -297,63 +345,208 @@ struct LongrangeMaker {
       // K0short
       if (isSelectK0s(col, v0)) { // candidate is K0s
         v0LRTable(collisionLRTable.lastIndex(), posTrack.globalIndex(), negTrack.globalIndex(),
-                  v0.pt(), v0.eta(), v0.phi(), v0.mK0Short(), aod::LRCorrTrkTable::kSpK0short);
+                  v0.pt(), v0.eta(), v0.phi(), v0.mK0Short(), aod::lrcorrtrktable::kSpK0short);
       }
 
       // Lambda and Anti-Lambda
-      bool LambdaTag = isSelectLambda<KindOfV0::kLambda>(col, v0);
-      bool ALambdaTag = isSelectLambda<KindOfV0::kAntiLambda>(col, v0);
+      bool lambdaTag = isSelectLambda<KindOfV0::kLambda>(col, v0);
+      bool antilambdaTag = isSelectLambda<KindOfV0::kAntiLambda>(col, v0);
 
       // Note: candidate compatible with Lambda and Anti-Lambda hypothesis are counted twice (once for each hypothesis)
-      if (LambdaTag) { // candidate is Lambda
+      if (lambdaTag) { // candidate is Lambda
         massV0 = v0.mLambda();
         v0LRTable(collisionLRTable.lastIndex(), posTrack.globalIndex(), negTrack.globalIndex(),
-                  v0.pt(), v0.eta(), v0.phi(), massV0, aod::LRCorrTrkTable::kSpLambda);
+                  v0.pt(), v0.eta(), v0.phi(), massV0, aod::lrcorrtrktable::kSpLambda);
       }
-      if (ALambdaTag) { // candidate is Anti-lambda
+      if (antilambdaTag) { // candidate is Anti-lambda
         massV0 = v0.mAntiLambda();
         v0LRTable(collisionLRTable.lastIndex(), posTrack.globalIndex(), negTrack.globalIndex(),
-                  v0.pt(), v0.eta(), v0.phi(), massV0, aod::LRCorrTrkTable::kSpALambda);
+                  v0.pt(), v0.eta(), v0.phi(), massV0, aod::lrcorrtrktable::kSpALambda);
       } // end of Lambda and Anti-Lambda processing
     }
   } // process function
+
+  void processUpc(CollTable::iterator const& col, BCs const& bcs,
+                  TrksTable const& tracks, aod::Zdcs const&,
+                  aod::FV0As const& fv0as, aod::FT0s const& ft0s,
+                  aod::FDDs const& fdds, MftTrkTable const& mfttracks,
+                  soa::SmallGroups<aod::BestCollisionsFwd> const& retracks,
+                  aod::V0Datas const& V0s)
+  {
+    if (!isEventSelected(col)) {
+      return;
+    }
+
+    if (!col.has_foundBC()) {
+      return;
+    }
+
+    auto bc = col.template foundBC_as<BCs>();
+    auto newbc = bc;
+    // obtain slice of compatible BCs
+    auto bcRange = udhelpers::compatibleBCs(col, cfgSgCuts.NDtcoll(), bcs, cfgSgCuts.minNBCs());
+    auto isSGEvent = sgSelector.IsSelected(cfgSgCuts, col, bcRange, bc);
+    int issgevent = isSGEvent.value;
+    histos.fill(HIST("hSelectionResult"), isSGEvent.value);
+
+    if (issgevent <= cfgGapSide) {
+      if (cfgSgCuts.minRgtrwTOF()) {
+        if (udhelpers::rPVtrwTOF<true>(tracks, col.numContrib()) < cfgSgCuts.minRgtrwTOF())
+          return;
+      }
+
+      upchelpers::FITInfo fitInfo{};
+      udhelpers::getFITinfo(fitInfo, newbc, bcs, ft0s, fv0as, fdds);
+      auto multiplicity = countNTracks(tracks);
+      outupccol(bc.globalBC(), bc.runNumber(), col.posZ(), multiplicity, fitInfo.ampFT0A, fitInfo.ampFT0C, fitInfo.timeFV0A);
+      outsgupccol(issgevent);
+      if (newbc.has_zdc()) {
+        auto zdc = newbc.zdc();
+        outzdctable(outupccol.lastIndex(), zdc.energyCommonZNA(), zdc.energyCommonZNC());
+      } else {
+        outzdctable(outupccol.lastIndex(), -999, -999);
+      }
+
+      // track loop
+      for (const auto& track : tracks) {
+        if (!track.isGlobalTrack())
+          continue;
+        if (!myTrackFilter.IsSelected(track))
+          continue;
+        tracksLRUpcTable(outupccol.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpCharge);
+        if (getTrackPID(track) == PionTrackN)
+          tracksLRUpcTable(outupccol.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpPion);
+        if (getTrackPID(track) == KaonTrackN)
+          tracksLRUpcTable(outupccol.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpKaon);
+        if (getTrackPID(track) == ProtonTrackN)
+          tracksLRUpcTable(outupccol.lastIndex(), track.pt(), track.eta(), track.phi(), aod::lrcorrtrktable::kSpProton);
+      }
+
+      // ft0 loop
+      if (col.has_foundFT0()) {
+        const auto& ft0 = col.foundFT0();
+        for (std::size_t iCh = 0; iCh < ft0.channelA().size(); iCh++) {
+          auto chanelid = ft0.channelA()[iCh];
+          float ampl = ft0.amplitudeA()[iCh];
+          auto phi = getPhiFT0(chanelid, 0);
+          auto eta = getEtaFT0(chanelid, 0);
+          ft0aLRUpcTable(outupccol.lastIndex(), chanelid, ampl, eta, phi);
+        }
+        for (std::size_t iCh = 0; iCh < ft0.channelC().size(); iCh++) {
+          auto chanelid = ft0.channelC()[iCh];
+          float ampl = ft0.amplitudeC()[iCh];
+          auto phi = getPhiFT0(chanelid, 1);
+          auto eta = getEtaFT0(chanelid, 1);
+          ft0cLRUpcTable(outupccol.lastIndex(), chanelid, ampl, eta, phi);
+        }
+      }
+
+      // mft loop
+      for (const auto& track : mfttracks) {
+        if (!isMftTrackSelected(track))
+          continue;
+        auto phi = track.phi();
+        o2::math_utils::bringTo02Pi(phi);
+        mftLRUpcTable(outupccol.lastIndex(), track.pt(), track.eta(), phi);
+      }
+
+      if (retracks.size() > 0) {
+        for (const auto& retrack : retracks) {
+          if (std::abs(retrack.bestDCAXY()) > cfgmfttrksel.cfigMftDcaxy) {
+            continue; // does not point to PV properly
+          }
+          auto track = retrack.mfttrack();
+          if (!isMftTrackSelected(track)) {
+            continue;
+          }
+          auto phi = track.phi();
+          o2::math_utils::bringTo02Pi(phi);
+          mftbestLRUpcTable(outupccol.lastIndex(), track.pt(), track.eta(), phi);
+        }
+      }
+
+      // v0 loop
+      for (const auto& v0 : V0s) {
+        if (!isSelectV0Track(v0)) { // Quality selection for V0 prongs
+          continue;
+        }
+        const auto& posTrack = v0.template posTrack_as<TrksTable>();
+        const auto& negTrack = v0.template negTrack_as<TrksTable>();
+        double massV0 = 0.0;
+
+        // K0short
+        if (isSelectK0s(col, v0)) { // candidate is K0s
+          v0LRUpcTable(outupccol.lastIndex(), posTrack.globalIndex(), negTrack.globalIndex(),
+                       v0.pt(), v0.eta(), v0.phi(), v0.mK0Short(), aod::lrcorrtrktable::kSpK0short);
+        }
+
+        // Lambda and Anti-Lambda
+        bool lambdaTag = isSelectLambda<KindOfV0::kLambda>(col, v0);
+        bool antilambdaTag = isSelectLambda<KindOfV0::kAntiLambda>(col, v0);
+
+        // Note: candidate compatible with Lambda and Anti-Lambda hypothesis are counted twice (once for each hypothesis)
+        if (lambdaTag) { // candidate is Lambda
+          massV0 = v0.mLambda();
+          v0LRUpcTable(outupccol.lastIndex(), posTrack.globalIndex(), negTrack.globalIndex(),
+                       v0.pt(), v0.eta(), v0.phi(), massV0, aod::lrcorrtrktable::kSpLambda);
+        }
+        if (antilambdaTag) { // candidate is Anti-lambda
+          massV0 = v0.mAntiLambda();
+          v0LRUpcTable(outupccol.lastIndex(), posTrack.globalIndex(), negTrack.globalIndex(),
+                       v0.pt(), v0.eta(), v0.phi(), massV0, aod::lrcorrtrktable::kSpALambda);
+        } // end of Lambda and Anti-Lambda processing
+      }
+    } // SG events
+  }
 
   template <typename CheckCol>
   bool isEventSelected(CheckCol const& col)
   {
     histos.fill(HIST("EventHist"), 1);
-    if (!col.sel8()) {
+    if (cfgevtsel.isApplyTrigTvx && !col.selection_bit(o2::aod::evsel::kIsTriggerTVX)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 2);
-    if (cfgevtsel.isApplySameBunchPileup && !col.selection_bit(o2::aod::evsel::kNoSameBunchPileup)) {
+    if (cfgevtsel.isApplyTfborder && !col.selection_bit(o2::aod::evsel::kNoTimeFrameBorder)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 3);
-    if (cfgevtsel.isApplyGoodZvtxFT0vsPV && !col.selection_bit(o2::aod::evsel::kIsGoodZvtxFT0vsPV)) {
+    if (cfgevtsel.isApplyItsRofborder && !col.selection_bit(o2::aod::evsel::kNoITSROFrameBorder)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 4);
-    if (cfgevtsel.isApplyGoodITSLayersAll && !col.selection_bit(o2::aod::evsel::kIsGoodITSLayersAll)) {
+    if (cfgevtsel.isApplySameBunchPileup && !col.selection_bit(o2::aod::evsel::kNoSameBunchPileup)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 5);
-    if (cfgevtsel.isApplyExtraCorrCut && col.multNTracksPV() > cfgevtsel.npvTracksCut && col.multFT0C() < (10 * col.multNTracksPV() - cfgevtsel.ft0cCut)) {
+    if (cfgevtsel.isApplyGoodZvtxFT0vsPV && !col.selection_bit(o2::aod::evsel::kIsGoodZvtxFT0vsPV)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 6);
-    if (cfgevtsel.isApplyNoCollInTimeRangeStandard && !col.selection_bit(o2::aod::evsel::kNoCollInTimeRangeStandard)) {
+    if (cfgevtsel.isApplyGoodITSLayersAll && !col.selection_bit(o2::aod::evsel::kIsGoodITSLayersAll)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 7);
-    if (cfgevtsel.isApplyNoCollInRofStandard && !col.selection_bit(o2::aod::evsel::kNoCollInRofStandard)) {
+    if (cfgevtsel.isApplyExtraCorrCut && col.multNTracksPV() > cfgevtsel.npvTracksCut && col.multFT0C() < (10 * col.multNTracksPV() - cfgevtsel.ft0cCut)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 8);
-    if (cfgevtsel.isApplyNoHighMultCollInPrevRof && !col.selection_bit(o2::aod::evsel::kNoHighMultCollInPrevRof)) {
+    if (cfgevtsel.isApplyNoCollInTimeRangeStandard && !col.selection_bit(o2::aod::evsel::kNoCollInTimeRangeStandard)) {
       return false;
     }
     histos.fill(HIST("EventHist"), 9);
+    if (cfgevtsel.isApplyNoCollInRofStandard && !col.selection_bit(o2::aod::evsel::kNoCollInRofStandard)) {
+      return false;
+    }
+    histos.fill(HIST("EventHist"), 10);
+    if (cfgevtsel.isApplyNoHighMultCollInPrevRof && !col.selection_bit(o2::aod::evsel::kNoHighMultCollInPrevRof)) {
+      return false;
+    }
+    histos.fill(HIST("EventHist"), 11);
+    if (cfgevtsel.isApplyOccuSelection && (col.trackOccupancyInTimeRange() > cfgevtsel.cfgOccuCut)) {
+      return false;
+    }
+    histos.fill(HIST("EventHist"), 12);
     return true;
   }
 
@@ -452,7 +645,7 @@ struct LongrangeMaker {
     auto x = chPos.X() + (*offsetFT0)[i].getX();
     auto y = chPos.Y() + (*offsetFT0)[i].getY();
     auto z = chPos.Z() + (*offsetFT0)[i].getZ();
-    if (chno >= kMinFt0cCell)
+    if (chno >= KminFt0cCell)
       z = -z;
     auto r = std::sqrt(x * x + y * y);
     auto theta = std::atan2(r, z);
@@ -504,7 +697,7 @@ struct LongrangeMaker {
     const auto& posTrack = v0.template posTrack_as<TrksTable>();
     const auto& negTrack = v0.template negTrack_as<TrksTable>();
 
-    float CtauK0s = v0.distovertotmom(col.posX(), col.posY(), col.posZ()) * o2::constants::physics::MassK0;
+    float ctauK0s = v0.distovertotmom(col.posX(), col.posY(), col.posZ()) * o2::constants::physics::MassK0;
 
     if (v0.mK0Short() < cfgv0trksel.minK0sMass || v0.mK0Short() > cfgv0trksel.maxK0sMass) {
       return false;
@@ -521,13 +714,13 @@ struct LongrangeMaker {
     if (v0.dcaV0daughters() > cfgv0trksel.maxDcaV0DauK0s) {
       return false;
     }
-    if (std::abs(CtauK0s) > cfgv0trksel.maxK0sLifeTime) {
+    if (std::abs(ctauK0s) > cfgv0trksel.maxK0sLifeTime) {
       return false;
     }
     if (((std::abs(posTrack.tpcNSigmaPi()) > cfgv0trksel.daughPIDCuts) || (std::abs(negTrack.tpcNSigmaPi()) > cfgv0trksel.daughPIDCuts))) {
       return false;
     }
-    if ((TMath::Abs(v0.dcapostopv()) < cfgv0trksel.minV0DcaPiK0s || TMath::Abs(v0.dcanegtopv()) < cfgv0trksel.minV0DcaPiK0s)) {
+    if ((std::abs(v0.dcapostopv()) < cfgv0trksel.minV0DcaPiK0s || std::abs(v0.dcanegtopv()) < cfgv0trksel.minV0DcaPiK0s)) {
       return false;
     }
     return true;
@@ -538,7 +731,7 @@ struct LongrangeMaker {
   {
     const auto& posTrack = v0.template posTrack_as<TrksTable>();
     const auto& negTrack = v0.template negTrack_as<TrksTable>();
-    float CtauLambda = v0.distovertotmom(col.posX(), col.posY(), col.posZ()) * o2::constants::physics::MassLambda;
+    float ctauLambda = v0.distovertotmom(col.posX(), col.posY(), col.posZ()) * o2::constants::physics::MassLambda;
     if ((v0.mLambda() < cfgv0trksel.minLambdaMass || v0.mLambda() > cfgv0trksel.maxLambdaMass) &&
         (v0.mAntiLambda() < cfgv0trksel.minLambdaMass || v0.mAntiLambda() > cfgv0trksel.maxLambdaMass)) {
       return false;
@@ -552,10 +745,10 @@ struct LongrangeMaker {
     if (v0.dcaV0daughters() > cfgv0trksel.maxDcaV0DauLambda) {
       return false;
     }
-    if (pid == KindOfV0::kLambda && (TMath::Abs(v0.dcapostopv()) < cfgv0trksel.minV0DcaPr || TMath::Abs(v0.dcanegtopv()) < cfgv0trksel.minV0DcaPiLambda)) {
+    if (pid == KindOfV0::kLambda && (std::abs(v0.dcapostopv()) < cfgv0trksel.minV0DcaPr || std::abs(v0.dcanegtopv()) < cfgv0trksel.minV0DcaPiLambda)) {
       return false;
     }
-    if (pid == KindOfV0::kAntiLambda && (TMath::Abs(v0.dcapostopv()) < cfgv0trksel.minV0DcaPiLambda || TMath::Abs(v0.dcanegtopv()) < cfgv0trksel.minV0DcaPr)) {
+    if (pid == KindOfV0::kAntiLambda && (std::abs(v0.dcapostopv()) < cfgv0trksel.minV0DcaPiLambda || std::abs(v0.dcanegtopv()) < cfgv0trksel.minV0DcaPr)) {
       return false;
     }
     if (pid == KindOfV0::kLambda && ((std::abs(posTrack.tpcNSigmaPr()) > cfgv0trksel.daughPIDCuts) || (std::abs(negTrack.tpcNSigmaPi()) > cfgv0trksel.daughPIDCuts))) {
@@ -564,11 +757,14 @@ struct LongrangeMaker {
     if (pid == KindOfV0::kAntiLambda && ((std::abs(posTrack.tpcNSigmaPi()) > cfgv0trksel.daughPIDCuts) || (std::abs(negTrack.tpcNSigmaPr()) > cfgv0trksel.daughPIDCuts))) {
       return false;
     }
-    if (std::abs(CtauLambda) > cfgv0trksel.maxLambdaLifeTime) {
+    if (std::abs(ctauLambda) > cfgv0trksel.maxLambdaLifeTime) {
       return false;
     }
     return true;
   }
+
+  PROCESS_SWITCH(LongrangeMaker, processData, "process All collisions", false);
+  PROCESS_SWITCH(LongrangeMaker, processUpc, "process UPC collisions", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)

@@ -63,6 +63,10 @@ struct ConfCpr : o2::framework::ConfigurableGroup {
   o2::framework::Configurable<bool> plotAverage{"plotAverage", true, "Plot average deta dphi distribution"};
   o2::framework::Configurable<float> detaMax{"detaMax", 0.01f, "Maximium deta"};
   o2::framework::Configurable<float> dphistarMax{"dphistarMax", 0.01f, "Maximum dphistar"};
+  o2::framework::Configurable<float> detaCenter{"detaCenter", 0.f, "Center of deta cut"};
+  o2::framework::Configurable<float> dphistarCenter{"dphistarCenter", 0.f, "Center of dphistar cut"};
+  o2::framework::Configurable<float> kstarMin{"kstarMin", -1.f, "Minimum kstar of pair for plotting (Set to negative value to turn off the cut)"};
+  o2::framework::Configurable<float> kstarMax{"kstarMax", -1.f, "Maximum kstar of pair for plotting (Set to negative value to turn off the cut)"};
   o2::framework::ConfigurableAxis binningDeta{"binningDeta", {{250, -0.5, 0.5}}, "deta"};
   o2::framework::ConfigurableAxis binningDphistar{"binningDphistar", {{250, -0.5, 0.5}}, "dphi"};
 };
@@ -140,36 +144,38 @@ class CloseTrackRejection
   CloseTrackRejection() = default;
   ~CloseTrackRejection() = default;
 
+  template <typename T>
   void init(o2::framework::HistogramRegistry* registry,
             std::map<CprHist, std::vector<o2::framework::AxisSpec>> const& specs,
-            bool plotAverage,
-            bool plotAllRadii,
-            bool cutOnAverage,
-            bool cutOnAnyRadius,
-            float detaMax,
-            float dphistarMax,
+            T const& confCpr,
             int chargeAbsTrack1,
             int chargeAbsTrack2)
   {
-    mDetaMax = detaMax;
-    mDphistarMax = dphistarMax;
+    mDetaMax = confCpr.detaMax.value;
+    mDphistarMax = confCpr.dphistarMax.value;
 
     // check the limits
     if (mDetaMax <= 0 || mDphistarMax <= 0) {
       LOG(fatal) << "Limits for Close Pair Rejection are invalid (0 or negative). Breaking...";
     }
 
+    mDetaCenter = confCpr.detaCenter.value;
+    mDphistarCenter = confCpr.dphistarCenter.value;
+
     mChargeAbsTrack1 = std::abs(chargeAbsTrack1);
     mChargeAbsTrack2 = std::abs(chargeAbsTrack2);
 
-    mCutOnAverage = cutOnAverage;
-    mCutOnAnyRadius = cutOnAnyRadius;
+    mCutAverage = confCpr.cutAverage.value;
+    mCutAnyRadius = confCpr.cutAnyRadius.value;
 
-    mPlotAverage = plotAverage;
-    mPlotAllRadii = plotAllRadii;
+    mKstarMin = confCpr.kstarMin.value;
+    mKstarMax = confCpr.kstarMax.value;
+
+    mPlotAverage = confCpr.plotAverage.value;
+    mPlotAllRadii = confCpr.plotAllRadii.value;
 
     // check if we need to apply any cut a plot is requested
-    mIsActivated = mCutOnAverage || mCutOnAnyRadius || mPlotAverage || mPlotAllRadii;
+    mIsActivated = mCutAverage || mCutAnyRadius || mPlotAverage || mPlotAllRadii;
 
     mHistogramRegistry = registry;
 
@@ -210,20 +216,33 @@ class CloseTrackRejection
       auto phistar1 = utils::dphistar(mMagField, TpcRadii[i], mChargeAbsTrack1 * track1.signedPt(), track1.phi());
       auto phistar2 = utils::dphistar(mMagField, TpcRadii[i], mChargeAbsTrack2 * track2.signedPt(), track2.phi());
       if (phistar1 && phistar2) {
-        mDphistar.at(i) = RecoDecay::constrainAngle(phistar1.value() - phistar2.value(), -o2::constants::math::PI); // const angle difference between -pi and pi
+        mDphistar.at(i) = RecoDecay::constrainAngle(phistar1.value() - phistar2.value(), -o2::constants::math::PI); // constrain angular difference between -pi and pi
         mDphistarMask.at(i) = true;
         count++;
       }
     }
     // for small momemeta the calculation of phistar might fail, if the particle did not reach a certain radius
-    mAverageDphistar = std::accumulate(mDphistar.begin(), mDphistar.end(), 0.f) / count; // only average values if phistar could be computed
+    if (count > 0) {
+      mAverageDphistar = std::accumulate(mDphistar.begin(), mDphistar.end(), 0.f) / count; // only average values if phistar could be computed
+    } else {
+      mAverageDphistar = 0.f; // if computation at all radii fail, set it 0
+    }
   }
 
-  void fill()
+  void fill(float kstar)
   {
     if (!mIsActivated) {
       return;
     }
+
+    if (mKstarMin > 0.f && kstar < mKstarMin) {
+      return;
+    }
+
+    if (mKstarMax > 0.f && kstar > mKstarMax) {
+      return;
+    }
+
     // fill average hist
     if (mPlotAverage) {
       mHistogramRegistry->fill(HIST(prefix) + HIST(getHistName(kAverage, HistTable)), mDeta, mAverageDphistar);
@@ -269,17 +288,17 @@ class CloseTrackRejection
     bool isCloseAverage = false;
     bool isCloseAnyRadius = false;
 
-    if (mCutOnAverage) {
-      isCloseAverage = std::hypot(mAverageDphistar / mDphistarMax, mDeta / mDetaMax) < 1.f;
+    if (mCutAverage) {
+      isCloseAverage = std::hypot((mAverageDphistar - mDphistarCenter) / mDphistarMax, (mDeta - mDetaCenter) / mDetaMax) < 1.f;
     }
 
-    if (mCutOnAnyRadius) {
+    if (mCutAnyRadius) {
       for (size_t i = 0; i < TpcRadii.size(); i++) {
         if (isCloseAnyRadius) {
           break;
         }
         if (mDphistarMask.at(i)) {
-          isCloseAnyRadius = std::hypot(mDphistar.at(i) / mDphistarMax, mDeta / mDetaMax) < 1.f;
+          isCloseAnyRadius = std::hypot((mDphistar.at(i) - mDphistarCenter) / mDphistarMax, (mDeta - mDetaCenter) / mDetaMax) < 1.f;
         }
       }
     }
@@ -293,8 +312,11 @@ class CloseTrackRejection
   bool mPlotAllRadii = false;
   bool mPlotAverage = false;
 
-  bool mCutOnAverage = false;
-  bool mCutOnAnyRadius = false;
+  float mKstarMin = -1.f;
+  float mKstarMax = -1.f;
+
+  bool mCutAverage = false;
+  bool mCutAnyRadius = false;
 
   bool mIsActivated = false;
 
@@ -303,6 +325,8 @@ class CloseTrackRejection
   float mMagField = 0.f;
   float mDetaMax = 0.f;
   float mDphistarMax = 0.f;
+  float mDetaCenter = 0.f;
+  float mDphistarCenter = 0.f;
 
   float mAverageDphistar = 0.f;
   float mDeta = 0.f;
@@ -321,7 +345,7 @@ class ClosePairRejectionTrackTrack
             int absChargeTrack1,
             int absChargeTrack2)
   {
-    mCtr.init(registry, specs, confCpr.plotAverage.value, confCpr.plotAllRadii.value, confCpr.cutAverage.value, confCpr.cutAnyRadius.value, confCpr.detaMax.value, confCpr.dphistarMax.value, absChargeTrack1, absChargeTrack2);
+    mCtr.init(registry, specs, confCpr, absChargeTrack1, absChargeTrack2);
   }
 
   void setMagField(float magField) { mCtr.setMagField(magField); }
@@ -331,7 +355,7 @@ class ClosePairRejectionTrackTrack
     mCtr.compute(track1, track2);
   }
   bool isClosePair() const { return mCtr.isClosePair(); }
-  void fill() { mCtr.fill(); }
+  void fill(float kstar) { mCtr.fill(kstar); }
 
  private:
   CloseTrackRejection<prefix> mCtr;
@@ -348,8 +372,8 @@ class ClosePairRejectionV0V0
             T1 const& confCprPos,
             T2 const& confCprNeg)
   {
-    mCtrPos.init(registry, specsPos, confCprPos.plotAverage.value, confCprPos.plotAllRadii.value, confCprPos.cutAverage.value, confCprPos.cutAnyRadius.value, confCprPos.detaMax.value, confCprPos.dphistarMax.value, 1, 1);
-    mCtrNeg.init(registry, specsNeg, confCprNeg.plotAverage.value, confCprNeg.plotAllRadii.value, confCprNeg.cutAverage.value, confCprNeg.cutAnyRadius.value, confCprNeg.detaMax.value, confCprNeg.dphistarMax.value, 1, 1);
+    mCtrPos.init(registry, specsPos, confCprPos, 1, 1);
+    mCtrNeg.init(registry, specsNeg, confCprNeg, 1, 1);
   }
 
   void setMagField(float magField)
@@ -372,10 +396,10 @@ class ClosePairRejectionV0V0
 
   bool isClosePair() const { return mCtrPos.isClosePair() || mCtrNeg.isClosePair(); }
 
-  void fill()
+  void fill(float kstar)
   {
-    mCtrPos.fill();
-    mCtrNeg.fill();
+    mCtrPos.fill(kstar);
+    mCtrNeg.fill(kstar);
   }
 
  private:
@@ -393,7 +417,7 @@ class ClosePairRejectionTrackV0 // can also be used for any particle type that h
             T const& confCpr,
             int absChargeTrack)
   {
-    mCtr.init(registry, specs, confCpr.plotAverage.value, confCpr.plotAllRadii.value, confCpr.cutAverage.value, confCpr.cutAnyRadius.value, confCpr.detaMax.value, confCpr.dphistarMax.value, absChargeTrack, 1);
+    mCtr.init(registry, specs, confCpr, absChargeTrack, 1);
   }
 
   void setMagField(float magField) { mCtr.setMagField(magField); }
@@ -412,7 +436,7 @@ class ClosePairRejectionTrackV0 // can also be used for any particle type that h
 
   bool isClosePair() const { return mCtr.isClosePair(); }
 
-  void fill() { mCtr.fill(); }
+  void fill(float kstar) { mCtr.fill(kstar); }
 
  private:
   CloseTrackRejection<prefixTrackV0> mCtr;
@@ -430,8 +454,8 @@ class ClosePairRejectionTrackCascade
             T2 const& confCprV0Daughter,
             int absChargeTrack)
   {
-    mCtrBachelor.init(registry, specsBachelor, confCprBachelor.plotAverage.value, confCprBachelor.plotAllRadii.value, confCprBachelor.cutAverage.value, confCprBachelor.cutAnyRadius.value, confCprBachelor.detaMax.value, confCprBachelor.dphistarMax.value, absChargeTrack, 1);
-    mCtrV0Daughter.init(registry, specsV0Daughter, confCprV0Daughter.plotAverage.value, confCprV0Daughter.plotAllRadii.value, confCprV0Daughter.cutAverage.value, confCprV0Daughter.cutAnyRadius.value, confCprV0Daughter.detaMax.value, confCprV0Daughter.dphistarMax.value, absChargeTrack, 1);
+    mCtrBachelor.init(registry, specsBachelor, confCprBachelor, absChargeTrack, 1);
+    mCtrV0Daughter.init(registry, specsV0Daughter, confCprV0Daughter, absChargeTrack, 1);
   }
 
   void setMagField(float magField)
@@ -461,10 +485,10 @@ class ClosePairRejectionTrackCascade
     return mCtrBachelor.isClosePair() || mCtrBachelor.isClosePair();
   }
 
-  void fill()
+  void fill(float kstar)
   {
-    mCtrBachelor.fill();
-    mCtrV0Daughter.fill();
+    mCtrBachelor.fill(kstar);
+    mCtrV0Daughter.fill(kstar);
   }
 
  private:
@@ -482,7 +506,7 @@ class ClosePairRejectionTrackKink
             T const& confCpr,
             int absChargeTrack)
   {
-    mCtr.init(registry, specs, confCpr.plotAverage.value, confCpr.plotAllRadii.value, confCpr.cutAverage.value, confCpr.cutAnyRadius.value, confCpr.detaMax.value, confCpr.dphistarMax.value, absChargeTrack, 1);
+    mCtr.init(registry, specs, confCpr, absChargeTrack, 1);
   }
 
   void setMagField(float magField)
@@ -498,7 +522,7 @@ class ClosePairRejectionTrackKink
   }
 
   bool isClosePair() const { return mCtr.isClosePair(); }
-  void fill() { mCtr.fill(); }
+  void fill(float kstar) { mCtr.fill(kstar); }
 
  private:
   CloseTrackRejection<prefix> mCtr;

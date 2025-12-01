@@ -21,13 +21,16 @@
 #include "PWGHF/Core/SelectorCuts.h"
 #include "PWGHF/D2H/DataModel/ReducedDataModel.h"
 #include "PWGHF/D2H/Utils/utilsRedDataFormat.h"
+#include "PWGHF/DataModel/AliasTables.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
+#include "PWGHF/DataModel/TrackIndexSkimmingTables.h"
 #include "PWGHF/Utils/utilsEvSelHf.h"
 #include "PWGHF/Utils/utilsTrkCandHf.h"
 
 #include "Common/Core/RecoDecay.h"
 #include "Common/Core/TrackSelectorPID.h"
+#include "Common/Core/ZorroSummary.h"
 #include "Common/Core/trackUtilities.h"
 #include "Common/DataModel/CollisionAssociationTables.h"
 #include "Common/DataModel/EventSelection.h"
@@ -184,8 +187,6 @@ struct HfDataCreatorJpsiHadReduced {
   Configurable<std::string> ccdbUrl{"ccdbUrl", "http://alice-ccdb.cern.ch", "url of the ccdb repository"};
   Configurable<std::string> ccdbPathGrpMag{"ccdbPathGrpMag", "GLO/Config/GRPMagField", "CCDB path of the GRPMagField object (Run 3)"};
 
-  HfHelper hfHelper;
-
   TrackSelectorPi selectorPion;
   TrackSelectorPr selectorProton;
   TrackSelectorEl selectorElectron;
@@ -220,6 +221,7 @@ struct HfDataCreatorJpsiHadReduced {
   o2::vertexing::DCAFitterN<4> df4;
 
   HistogramRegistry registry{"registry"};
+  OutputObj<ZorroSummary> zorroSummary{"zorroSummary"};
 
   void init(InitContext& initContext)
   {
@@ -335,7 +337,7 @@ struct HfDataCreatorJpsiHadReduced {
     }
 
     // init HF event selection helper
-    hfEvSel.init(registry);
+    hfEvSel.init(registry, zorroSummary);
     if (doprocessJpsiKMc || doprocessJpsiPhiMc) {
       const auto& workflows = initContext.services().get<RunningWorkflowInfo const>();
       for (const DeviceSpec& device : workflows.devices) {
@@ -357,7 +359,7 @@ struct HfDataCreatorJpsiHadReduced {
   bool selectionTopol(const T1& candidate, const T2& trackPos, const T2& trackNeg)
   {
     auto candpT = candidate.pt();
-    auto candInvMass = runJpsiToee ? hfHelper.invMassJpsiToEE(candidate) : hfHelper.invMassJpsiToMuMu(candidate);
+    auto candInvMass = runJpsiToee ? HfHelper::invMassJpsiToEE(candidate) : HfHelper::invMassJpsiToMuMu(candidate);
     auto pseudoPropDecLen = candidate.decayLengthXY() * candInvMass / candpT;
     auto pTBin = findBin(binsPt, candpT);
     if (pTBin == -1) {
@@ -824,7 +826,7 @@ struct HfDataCreatorJpsiHadReduced {
       registry.fill(HIST("hSelectionsJpsi"), 2 + aod::SelectionStep::RecoPID, candidate.pt());
 
       int const indexHfCandJpsi = hfJpsi.lastIndex() + 1;
-      float const invMassJpsi = runJpsiToee ? hfHelper.invMassJpsiToEE(candidate) : hfHelper.invMassJpsiToMuMu(candidate);
+      float const invMassJpsi = runJpsiToee ? HfHelper::invMassJpsiToEE(candidate) : HfHelper::invMassJpsiToMuMu(candidate);
       registry.fill(HIST("hMassJpsi"), invMassJpsi);
       registry.fill(HIST("hPtJpsi"), candidate.pt());
       registry.fill(HIST("hCpaJpsi"), candidate.cpa());
@@ -1049,9 +1051,9 @@ struct HfDataCreatorJpsiHadReduced {
       if (fillHfCandJpsi) { // fill Jpsi table only once per Jpsi candidate
         double invMassJpsi{0.};
         if (runJpsiToee) {
-          invMassJpsi = hfHelper.invMassJpsiToEE(candidate);
+          invMassJpsi = HfHelper::invMassJpsiToEE(candidate);
         } else {
-          invMassJpsi = hfHelper.invMassJpsiToMuMu(candidate);
+          invMassJpsi = HfHelper::invMassJpsiToMuMu(candidate);
         }
         hfJpsi(trackPos.globalIndex(), trackNeg.globalIndex(),
                indexHfReducedCollision,

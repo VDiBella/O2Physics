@@ -17,6 +17,7 @@
 
 #include "PWGHF/Core/DecayChannels.h"
 #include "PWGHF/Core/HfHelper.h"
+#include "PWGHF/DataModel/AliasTables.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 #include "PWGHF/DataModel/DerivedTables.h"
@@ -85,7 +86,6 @@ struct HfDerivedDataCreatorDplusToPiKPi {
   Configurable<float> downSampleBkgFactor{"downSampleBkgFactor", 1., "Fraction of background candidates to keep for ML trainings"};
   Configurable<float> ptMaxForDownSample{"ptMaxForDownSample", 10., "Maximum pt for the application of the downsampling factor"};
 
-  HfHelper hfHelper;
   SliceCache cache;
   static constexpr double Mass{o2::constants::physics::MassDPlus};
 
@@ -282,14 +282,16 @@ struct HfDerivedDataCreatorDplusToPiKPi {
             }
           }
         }
-        double const ct = hfHelper.ctDplus(candidate);
-        double const y = hfHelper.yDplus(candidate);
-        float const massDplusToPiKPi = hfHelper.invMassDplusToPiKPi(candidate);
+        double const ct = HfHelper::ctDplus(candidate);
+        double const y = HfHelper::yDplus(candidate);
+        float const massDplusToPiKPi = HfHelper::invMassDplusToPiKPi(candidate);
         std::vector<float> mlScoresDplusToPiKPi;
         if constexpr (IsMl) {
           std::copy(candidate.mlProbDplusToPiKPi().begin(), candidate.mlProbDplusToPiKPi().end(), std::back_inserter(mlScoresDplusToPiKPi));
         }
-        fillTablesCandidate(candidate, 0, massDplusToPiKPi, ct, y, flagMcRec, origin, swapping, flagDecayChanRec, mlScoresDplusToPiKPi);
+        auto trackprong0 = candidate.template prong0_as<TracksWPid>();
+        int const candFlag = (trackprong0.sign() > 0) ? 0 : 1; // 0: D+, 1: D-
+        fillTablesCandidate(candidate, candFlag, massDplusToPiKPi, ct, y, flagMcRec, origin, swapping, flagDecayChanRec, mlScoresDplusToPiKPi);
       }
     }
   }

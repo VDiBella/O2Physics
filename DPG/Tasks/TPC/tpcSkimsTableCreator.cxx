@@ -30,8 +30,9 @@
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/Multiplicity.h"
 #include "Common/DataModel/OccupancyTables.h"
-#include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/PIDResponseITS.h"
+#include "Common/DataModel/PIDResponseTOF.h"
+#include "Common/DataModel/PIDResponseTPC.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "Common/TableProducer/PID/pidTPCBase.h"
 
@@ -482,13 +483,13 @@ struct TreeWriterTpcV0 {
   }
 
   /// Apply a track quality selection with a filter!
-  void processStandard(Colls::iterator const& collision, V0sWithID const& v0s, CascsWithID const& cascs, aod::BCsWithTimestamps const&)
+  void processStandard(Colls::iterator const& collision, Trks const&, V0sWithID const& v0s, CascsWithID const& cascs, aod::BCsWithTimestamps const&)
   {
     runStandard<false, Trks>(collision, v0s, cascs);
   } /// process Standard
   PROCESS_SWITCH(TreeWriterTpcV0, processStandard, "Standard V0 Samples for PID", true);
 
-  void processStandardWithCorrecteddEdx(Colls::iterator const& collision, V0sWithID const& v0s, CascsWithID const& cascs, aod::BCsWithTimestamps const&)
+  void processStandardWithCorrecteddEdx(Colls::iterator const& collision, TrksWithDEdxCorrection const&, V0sWithID const& v0s, CascsWithID const& cascs, aod::BCsWithTimestamps const&)
   {
     runStandard<true, TrksWithDEdxCorrection>(collision, v0s, cascs);
   } /// process StandardWithCorrecteddEdx

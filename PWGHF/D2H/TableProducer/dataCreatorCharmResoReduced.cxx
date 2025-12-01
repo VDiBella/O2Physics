@@ -27,6 +27,7 @@
 #include "PWGHF/Utils/utilsMcMatching.h"
 
 #include "Common/Core/RecoDecay.h"
+#include "Common/Core/ZorroSummary.h"
 #include "Common/Core/trackUtilities.h"
 #include "Common/DataModel/CollisionAssociationTables.h"
 #include "Common/DataModel/EventSelection.h"
@@ -193,7 +194,6 @@ struct HfDataCreatorCharmResoReduced {
   Configurable<bool> rejectPairsWithCommonDaughter{"rejectPairsWithCommonDaughter", true, "flag to reject already at this stage the pairs that share a daughter track"};
   Configurable<bool> rejectCollisionsWithBadEvSel{"rejectCollisionsWithBadEvSel", true, "flag to reject collisions with bad event selection"};
 
-  HfHelper hfHelper;
   o2::hf_evsel::HfEventSelection hfEvSel;
   o2::hf_evsel::HfEventSelectionMc hfEvSelMc;
 
@@ -284,6 +284,7 @@ struct HfDataCreatorCharmResoReduced {
   PresliceUnsorted<McCollisionsNoCents> colPerMcCollision = aod::mccollisionlabel::mcCollisionId;
 
   HistogramRegistry registry{"registry"};
+  OutputObj<ZorroSummary> zorroSummary{"zorroSummary"};
 
   void init(InitContext& initContext)
   {
@@ -382,7 +383,7 @@ struct HfDataCreatorCharmResoReduced {
     fitter.setWeightedFinalPCA(false);
 
     // init HF event selection helper
-    hfEvSel.init(registry);
+    hfEvSel.init(registry, zorroSummary);
 
     const auto& workflows = initContext.services().get<RunningWorkflowInfo const>();
     for (const DeviceSpec& device : workflows.devices) {
@@ -1096,7 +1097,7 @@ struct HfDataCreatorCharmResoReduced {
         registry.fill(HIST("hMassVsPtDstarAll"), varUtils.ptD, varUtils.invMassD - varUtils.invMassD0);
       } else if constexpr (DType == DType::Dplus) {
         auto prong0 = tracksIU.rawIteratorAt(candD.prong0Id());
-        varUtils.invMassD = hfHelper.invMassDplusToPiKPi(candD);
+        varUtils.invMassD = HfHelper::invMassDplusToPiKPi(candD);
         secondaryVertexD[0] = candD.xSecondaryVertex();
         secondaryVertexD[1] = candD.ySecondaryVertex();
         secondaryVertexD[2] = candD.zSecondaryVertex();
@@ -1115,8 +1116,8 @@ struct HfDataCreatorCharmResoReduced {
         }
         registry.fill(HIST("hMassVsPtDplusAll"), varUtils.ptD, varUtils.invMassD);
       } else if constexpr (DType == DType::D0) {
-        varUtils.invMassD0 = hfHelper.invMassD0ToPiK(candD);
-        varUtils.invMassD0Bar = hfHelper.invMassD0barToKPi(candD);
+        varUtils.invMassD0 = HfHelper::invMassD0ToPiK(candD);
+        varUtils.invMassD0Bar = HfHelper::invMassD0barToKPi(candD);
         secondaryVertexD[0] = candD.xSecondaryVertex();
         secondaryVertexD[1] = candD.ySecondaryVertex();
         secondaryVertexD[2] = candD.zSecondaryVertex();
