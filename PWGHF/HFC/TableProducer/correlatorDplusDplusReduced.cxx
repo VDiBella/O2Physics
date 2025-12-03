@@ -15,35 +15,18 @@
 ///        In this file are defined and filled the output tables
 ///
 /// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
-/// \author Iouri BELIKOV <jouri.belikov@cern.ch>, IPHC Strasbourg 
-/// \author Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
+/// Based on the code of Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
 
-#include "PWGHF/Core/CentralityEstimation.h"
+
 #include "PWGHF/Core/DecayChannels.h"
 #include "PWGHF/Core/HfHelper.h"
 #include "PWGHF/DataModel/AliasTables.h"
-#include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 
 #include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
 
-#include "Common/Core/RecoDecay.h"
-#include "Common/DataModel/Centrality.h"
-
-#include <CommonConstants/PhysicsConstants.h>
-#include <Framework/ASoA.h>
-#include <Framework/AnalysisDataModel.h>
-#include <Framework/AnalysisHelpers.h>
-#include <Framework/AnalysisTask.h>
-#include <Framework/Configurable.h>
-#include <Framework/InitContext.h>
 #include <Framework/runDataProcessing.h>
 
-#include <cstdint>
-#include <vector>
-
-#include "CCDB/BasicCCDBManager.h"
-#include "Common/Core/Zorro.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -51,7 +34,7 @@ using namespace o2::framework::expressions;
 using namespace o2::hf_centrality;
 
 /// Writes the full information in an output TTree
-struct HfTreeCreatorDplusToPiKPi {
+struct HfCorrelatorDplusDplusReduced {
   Produces<o2::aod::HfCandDpFulls> rowCandidateFull;
   Produces<o2::aod::HfCandDpFullEvs> rowCandidateFullEvents;
   Produces<o2::aod::HfCandDpFullPs> rowCandidateFullParticles;
@@ -90,9 +73,7 @@ struct HfTreeCreatorDplusToPiKPi {
   Partition<SelectedCandidatesMc> reconstructedCandBkg = nabs(aod::hf_cand_3prong::flagMcMatchRec) != static_cast<int8_t>(hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi);
   Partition<SelectedCandidatesMcWithMl> reconstructedCandSigMl = (nabs(aod::hf_cand_3prong::flagMcMatchRec) == static_cast<int8_t>(hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)) || (fillCorrBkgs && (nabs(o2::aod::hf_cand_3prong::flagMcMatchRec) != 0));
 
-  HistogramRegistry registry{
-    "registry"};
-
+  HistogramRegistry registry{"registry"};
   Zorro zorro;
   OutputObj<ZorroSummary> zorroSummary{"zorroSummary"};
 
@@ -301,7 +282,7 @@ struct HfTreeCreatorDplusToPiKPi {
           zorro.initCCDB(ccdb.service, runNumber, currentTimestamp, "fHfDoubleCharm3P");
           zorro.populateHistRegistry(registry, runNumber);
         }
-	zorro.isSelected(bc.globalBC());
+	    zorro.isSelected(bc.globalBC());
       }
 
       fillEvent(collision);
@@ -312,15 +293,12 @@ struct HfTreeCreatorDplusToPiKPi {
       }
     }
   }
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processDataPerCollision, "Process data per collision", false);
+  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processDataPerCollision, "Process data per collision", false);
 
   void processDataPerCollisionMc(aod::Collisions const& collisions,
-                                 aod::McCollisions const& mccollisions,
                                  SelectedCandidatesMc const& candidates,
-                                 MatchedGenCandidatesMc const& mcparticles,
                                  TracksWPid const&, aod::BCsWithTimestamps const&)
   {
-    static int lastRunNumber = -1;
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
     if (fillCandidateLiteTable) {
@@ -338,65 +316,7 @@ struct HfTreeCreatorDplusToPiKPi {
       }
     }
   }
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processDataPerCollisionMc, "Process data per collision", false);
-
-  void processData(aod::Collisions const& collisions,
-                   soa::Filtered<soa::Join<aod::HfCand3ProngWPidPiKa, aod::HfSelDplusToPiKPi>> const& candidates,
-                   TracksWPid const&)
-  {
-    // Filling event properties
-    rowCandidateFullEvents.reserve(collisions.size());
-    for (const auto& collision : collisions) {
-      fillEvent(collision);
-    }
-
-    // Filling candidate properties
-    if (fillCandidateLiteTable) {
-      rowCandidateLite.reserve(candidates.size());
-    } else {
-      rowCandidateFull.reserve(candidates.size());
-    }
-    for (const auto& candidate : candidates) {
-      if (downSampleBkgFactor < 1.) {
-        float pseudoRndm = candidate.ptProng0() * 1000. - static_cast<int64_t>(candidate.ptProng0() * 1000);
-        if (candidate.pt() < ptMaxForDownSample && pseudoRndm >= downSampleBkgFactor) {
-          continue;
-        }
-      }
-      fillCandidateTable<aod::Collisions>(candidate);
-    }
-  }
-
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processData, "Process data", true);
-
-  void processDataWCent(CollisionsCent const& collisions,
-                        soa::Filtered<soa::Join<aod::HfCand3ProngWPidPiKa, aod::HfSelDplusToPiKPi>> const& candidates,
-                        TracksWPid const&)
-  {
-    // Filling event properties
-    rowCandidateFullEvents.reserve(collisions.size());
-    for (const auto& collision : collisions) {
-      fillEvent(collision);
-    }
-
-    // Filling candidate properties
-    if (fillCandidateLiteTable) {
-      rowCandidateLite.reserve(candidates.size());
-    } else {
-      rowCandidateFull.reserve(candidates.size());
-    }
-    for (const auto& candidate : candidates) {
-      if (downSampleBkgFactor < 1.) {
-        float pseudoRndm = candidate.ptProng0() * 1000. - static_cast<int64_t>(candidate.ptProng0() * 1000);
-        if (candidate.pt() < ptMaxForDownSample && pseudoRndm >= downSampleBkgFactor) {
-          continue;
-        }
-      }
-      fillCandidateTable<CollisionsCent>(candidate);
-    }
-  }
-
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processDataWCent, "Process data with cent", false);
+  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processDataPerCollisionMc, "Process data per collision", false);
 
   template <bool applyMl = false, typename CandTypeMcRec, typename CandTypeMcGen, typename CollType>
   void fillMcTables(CollType const& collisions,
@@ -456,49 +376,11 @@ struct HfTreeCreatorDplusToPiKPi {
     }
   }
 
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processMc, "Process MC", false);
+  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMc, "Process MC", false);
 
-  void processMcWCent(CollisionsCent const& collisions,
-                      aod::McCollisions const& mccollisions,
-                      SelectedCandidatesMc const& candidates,
-                      MatchedGenCandidatesMc const& particles,
-                      TracksWPid const& tracks)
-  {
-    if (fillOnlySignal) {
-      fillMcTables(collisions, mccollisions, reconstructedCandSig, particles, tracks);
-    } else if (fillOnlyBackground) {
-      fillMcTables(collisions, mccollisions, reconstructedCandBkg, particles, tracks);
-    } else {
-      fillMcTables(collisions, mccollisions, candidates, particles, tracks);
-    }
-  }
-
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processMcWCent, "Process MC with cent", false);
-
-  void processMcSgnWMl(aod::Collisions const& collisions,
-                       aod::McCollisions const& mccollisions,
-                       SelectedCandidatesMcWithMl const&,
-                       MatchedGenCandidatesMc const& particles,
-                       TracksWPid const& tracks)
-  {
-    fillMcTables<true>(collisions, mccollisions, reconstructedCandSigMl, particles, tracks);
-  }
-
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processMcSgnWMl, "Process MC signal with ML info", false);
-
-  void processMcSgnWCentMl(CollisionsCent const& collisions,
-                           aod::McCollisions const& mccollisions,
-                           SelectedCandidatesMcWithMl const&,
-                           MatchedGenCandidatesMc const& particles,
-                           TracksWPid const& tracks)
-  {
-    fillMcTables<true>(collisions, mccollisions, reconstructedCandSigMl, particles, tracks);
-  }
-
-  PROCESS_SWITCH(HfTreeCreatorDplusToPiKPi, processMcSgnWCentMl, "Process MC signal with cent and ML info", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
-  return WorkflowSpec{adaptAnalysisTask<HfTreeCreatorDplusToPiKPi>(cfgc)};
+  return WorkflowSpec{adaptAnalysisTask<HfCorrelatorDplusDplusReduced>(cfgc)};
 }

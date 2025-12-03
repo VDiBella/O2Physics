@@ -14,31 +14,11 @@
 /// \note used to fold (unfold) track and primary vertex information by writing (reading) AO2Ds
 ///
 /// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
-/// \author Iouri BELIKOV <jouri.belikov@cern.ch>, IPHC Strasbourg 
 
-#ifndef PWGHF_D2H_DATAMODEL_REDUCEDDATAMODEL_H_
-#define PWGHF_D2H_DATAMODEL_REDUCEDDATAMODEL_H_
+#ifndef PWGHF_D2H_DATAMODEL_REDUCEDMESONPAIRSTABLES_H_
+#define PWGHF_D2H_DATAMODEL_REDUCEDMESONPAIRSTABLES_H_
 
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
-#include "PWGHF/Utils/utilsEvSelHf.h"
-#include "PWGHF/Utils/utilsPid.h"
-
-#include "Common/Core/RecoDecay.h"
-#include "Common/DataModel/Centrality.h"
-#include "Common/DataModel/EventSelection.h"
-#include "Common/DataModel/PIDResponseTOF.h"
-#include "Common/DataModel/PIDResponseTPC.h"
-#include "Common/DataModel/Qvectors.h"
-
-#include <CommonConstants/MathConstants.h>
-#include <CommonConstants/PhysicsConstants.h>
-#include <Framework/ASoA.h>
-#include <Framework/AnalysisDataModel.h>
-
-#include <array>
-#include <cmath>
-#include <cstdint>
-#include <cstdlib>
 
 namespace o2::aod
 {
@@ -48,7 +28,7 @@ DECLARE_SOA_TABLE(HfCandDpFullEvs, "AOD", "HFCANDDPFULLEV",
                   collision::PosY,
                   collision::PosZ);
 
-namespace hf_pair_reduced
+namespace full
 {
 DECLARE_SOA_COLUMN(RSecondaryVertex, rSecondaryVertex, float);                     //! Radius of secondary vertex (cm)
 DECLARE_SOA_COLUMN(PtProng0, ptProng0, float);                                     //! Transverse momentum of prong0 (GeV/c)
@@ -102,56 +82,56 @@ DECLARE_SOA_COLUMN(RunNumber, runNumber, int);         //! Run number
 // ML scores
 DECLARE_SOA_COLUMN(MlScore0, mlScore0, float); //! ML score of the first configured index
 DECLARE_SOA_COLUMN(MlScore1, mlScore1, float); //! ML score of the second configured index
-} // namespace hf_pair_reduced
+} // namespace full
 DECLARE_SOA_TABLE(HfCandDpMls, "AOD", "HFCANDDPML",
-                  hf_pair_reduced::MlScore0,
-                  hf_pair_reduced::MlScore1)
+                  full::MlScore0,
+                  full::MlScore1)
 
 DECLARE_SOA_TABLE(HfCandDpLites, "AOD", "HFCANDDPLITE",
                   hf_cand::Chi2PCA,
-                  hf_pair_reduced::DecayLength,
-                  hf_pair_reduced::DecayLengthXY,
-                  hf_pair_reduced::DecayLengthNormalised,
-                  hf_pair_reduced::DecayLengthXYNormalised,
-                  hf_pair_reduced::PtProng0,
-                  hf_pair_reduced::PtProng1,
-                  hf_pair_reduced::PtProng2,
+                  full::DecayLength,
+                  full::DecayLengthXY,
+                  full::DecayLengthNormalised,
+                  full::DecayLengthXYNormalised,
+                  full::PtProng0,
+                  full::PtProng1,
+                  full::PtProng2,
                   hf_cand::ImpactParameter0,
                   hf_cand::ImpactParameter1,
                   hf_cand::ImpactParameter2,
                   hf_cand::ImpactParameterZ0,
                   hf_cand::ImpactParameterZ1,
                   hf_cand::ImpactParameterZ2,
-                  hf_pair_reduced::NSigTpcPi0,
-                  hf_pair_reduced::NSigTpcKa0,
-                  hf_pair_reduced::NSigTofPi0,
-                  hf_pair_reduced::NSigTofKa0,
-                  hf_pair_reduced::NSigTpcTofPi0,
-                  hf_pair_reduced::NSigTpcTofKa0,
-                  hf_pair_reduced::NSigTpcPi1,
-                  hf_pair_reduced::NSigTpcKa1,
-                  hf_pair_reduced::NSigTofPi1,
-                  hf_pair_reduced::NSigTofKa1,
-                  hf_pair_reduced::NSigTpcTofPi1,
-                  hf_pair_reduced::NSigTpcTofKa1,
-                  hf_pair_reduced::NSigTpcPi2,
-                  hf_pair_reduced::NSigTpcKa2,
-                  hf_pair_reduced::NSigTofPi2,
-                  hf_pair_reduced::NSigTofKa2,
-                  hf_pair_reduced::NSigTpcTofPi2,
-                  hf_pair_reduced::NSigTpcTofKa2,
-                  hf_pair_reduced::CandidateSelFlag,
-                  hf_pair_reduced::M,
-                  hf_pair_reduced::Pt,
-                  hf_pair_reduced::Cpa,
-                  hf_pair_reduced::CpaXY,
-                  hf_pair_reduced::MaxNormalisedDeltaIP,
-                  hf_pair_reduced::Eta,
-                  hf_pair_reduced::Phi,
-                  hf_pair_reduced::Y,
-                  hf_pair_reduced::Centrality,
+                  full::NSigTpcPi0,
+                  full::NSigTpcKa0,
+                  full::NSigTofPi0,
+                  full::NSigTofKa0,
+                  full::NSigTpcTofPi0,
+                  full::NSigTpcTofKa0,
+                  full::NSigTpcPi1,
+                  full::NSigTpcKa1,
+                  full::NSigTofPi1,
+                  full::NSigTofKa1,
+                  full::NSigTpcTofPi1,
+                  full::NSigTpcTofKa1,
+                  full::NSigTpcPi2,
+                  full::NSigTpcKa2,
+                  full::NSigTofPi2,
+                  full::NSigTofKa2,
+                  full::NSigTpcTofPi2,
+                  full::NSigTpcTofKa2,
+                  full::CandidateSelFlag,
+                  full::M,
+                  full::Pt,
+                  full::Cpa,
+                  full::CpaXY,
+                  full::MaxNormalisedDeltaIP,
+                  full::Eta,
+                  full::Phi,
+                  full::Y,
+                  full::Centrality,
                   collision::NumContrib,
-                  hf_pair_reduced::HfCandDpFullEvId,
+                  full::HfCandDpFullEvId,
                   hf_cand_3prong::FlagMcMatchRec,
                   hf_cand_3prong::OriginMcRec,
                   hf_cand_3prong::FlagMcDecayChanRec)
@@ -167,20 +147,20 @@ DECLARE_SOA_TABLE(HfCandDpFulls, "AOD", "HFCANDDPFULL",
                   hf_cand::ErrorDecayLength,
                   hf_cand::ErrorDecayLengthXY,
                   hf_cand::Chi2PCA,
-                  hf_pair_reduced::RSecondaryVertex,
-                  hf_pair_reduced::DecayLength,
-                  hf_pair_reduced::DecayLengthXY,
-                  hf_pair_reduced::DecayLengthNormalised,
-                  hf_pair_reduced::DecayLengthXYNormalised,
-                  hf_pair_reduced::ImpactParameterNormalised0,
-                  hf_pair_reduced::PtProng0,
-                  hf_pair_reduced::PProng0,
-                  hf_pair_reduced::ImpactParameterNormalised1,
-                  hf_pair_reduced::PtProng1,
-                  hf_pair_reduced::PProng1,
-                  hf_pair_reduced::ImpactParameterNormalised2,
-                  hf_pair_reduced::PtProng2,
-                  hf_pair_reduced::PProng2,
+                  full::RSecondaryVertex,
+                  full::DecayLength,
+                  full::DecayLengthXY,
+                  full::DecayLengthNormalised,
+                  full::DecayLengthXYNormalised,
+                  full::ImpactParameterNormalised0,
+                  full::PtProng0,
+                  full::PProng0,
+                  full::ImpactParameterNormalised1,
+                  full::PtProng1,
+                  full::PProng1,
+                  full::ImpactParameterNormalised2,
+                  full::PtProng2,
+                  full::PProng2,
                   hf_cand::PxProng0,
                   hf_cand::PyProng0,
                   hf_cand::PzProng0,
@@ -202,47 +182,47 @@ DECLARE_SOA_TABLE(HfCandDpFulls, "AOD", "HFCANDDPFULL",
                   hf_cand::ErrorImpactParameterZ0,
                   hf_cand::ErrorImpactParameterZ1,
                   hf_cand::ErrorImpactParameterZ2,
-                  hf_pair_reduced::NSigTpcPi0,
-                  hf_pair_reduced::NSigTpcKa0,
-                  hf_pair_reduced::NSigTofPi0,
-                  hf_pair_reduced::NSigTofKa0,
-                  hf_pair_reduced::NSigTpcTofPi0,
-                  hf_pair_reduced::NSigTpcTofKa0,
-                  hf_pair_reduced::NSigTpcPi1,
-                  hf_pair_reduced::NSigTpcKa1,
-                  hf_pair_reduced::NSigTofPi1,
-                  hf_pair_reduced::NSigTofKa1,
-                  hf_pair_reduced::NSigTpcTofPi1,
-                  hf_pair_reduced::NSigTpcTofKa1,
-                  hf_pair_reduced::NSigTpcPi2,
-                  hf_pair_reduced::NSigTpcKa2,
-                  hf_pair_reduced::NSigTofPi2,
-                  hf_pair_reduced::NSigTofKa2,
-                  hf_pair_reduced::NSigTpcTofPi2,
-                  hf_pair_reduced::NSigTpcTofKa2,
-                  hf_pair_reduced::CandidateSelFlag,
-                  hf_pair_reduced::M,
-                  hf_pair_reduced::Pt,
-                  hf_pair_reduced::P,
-                  hf_pair_reduced::Cpa,
-                  hf_pair_reduced::CpaXY,
-                  hf_pair_reduced::MaxNormalisedDeltaIP,
-                  hf_pair_reduced::Ct,
-                  hf_pair_reduced::Eta,
-                  hf_pair_reduced::Phi,
-                  hf_pair_reduced::Y,
-                  hf_pair_reduced::E,
-                  hf_pair_reduced::Centrality,
-                  hf_pair_reduced::HfCandDpFullEvId,
+                  full::NSigTpcPi0,
+                  full::NSigTpcKa0,
+                  full::NSigTofPi0,
+                  full::NSigTofKa0,
+                  full::NSigTpcTofPi0,
+                  full::NSigTpcTofKa0,
+                  full::NSigTpcPi1,
+                  full::NSigTpcKa1,
+                  full::NSigTofPi1,
+                  full::NSigTofKa1,
+                  full::NSigTpcTofPi1,
+                  full::NSigTpcTofKa1,
+                  full::NSigTpcPi2,
+                  full::NSigTpcKa2,
+                  full::NSigTofPi2,
+                  full::NSigTofKa2,
+                  full::NSigTpcTofPi2,
+                  full::NSigTpcTofKa2,
+                  full::CandidateSelFlag,
+                  full::M,
+                  full::Pt,
+                  full::P,
+                  full::Cpa,
+                  full::CpaXY,
+                  full::MaxNormalisedDeltaIP,
+                  full::Ct,
+                  full::Eta,
+                  full::Phi,
+                  full::Y,
+                  full::E,
+                  full::Centrality,
+                  full::HfCandDpFullEvId,
                   hf_cand_3prong::FlagMcMatchRec,
                   hf_cand_3prong::OriginMcRec,
                   hf_cand_3prong::FlagMcDecayChanRec);
 
 DECLARE_SOA_TABLE(HfCandDpFullPs, "AOD", "HFCANDDPFULLP",
-                  hf_pair_reduced::Pt,
-                  hf_pair_reduced::Eta,
-                  hf_pair_reduced::Phi,
-                  hf_pair_reduced::Y,
+                  full::Pt,
+                  full::Eta,
+                  full::Phi,
+                  full::Y,
                   hf_cand_3prong::FlagMcMatchGen,
                   hf_cand_3prong::FlagMcDecayChanGen,
                   hf_cand_3prong::OriginMcGen);
@@ -250,4 +230,4 @@ DECLARE_SOA_TABLE(HfCandDpFullPs, "AOD", "HFCANDDPFULLP",
 
 
 
-#endif // PWGHF_D2H_DATAMODEL_REDUCEDDATAMODEL_H_
+#endif // PWGHF_D2H_DATAMODEL_REDUCEDMESONPAIRSTABLES_H_
