@@ -1,0 +1,253 @@
+// Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+// See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
+// All rights not expressly granted are reserved.
+//
+// This software is distributed under the terms of the GNU General Public
+// License v3 (GPL Version 3), copied verbatim in the file "COPYING".
+//
+// In applying this license CERN does not waive the privileges and immunities
+// granted to it by virtue of its status as an Intergovernmental Organization
+// or submit itself to any jurisdiction.
+
+/// \file ReducedDMesonPairsTables.h
+/// \brief Header file with definition of methods and tables
+/// \note used to fold (unfold) track and primary vertex information by writing (reading) AO2Ds
+///
+/// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
+/// \author Iouri BELIKOV <jouri.belikov@cern.ch>, IPHC Strasbourg 
+
+#ifndef PWGHF_D2H_DATAMODEL_REDUCEDDATAMODEL_H_
+#define PWGHF_D2H_DATAMODEL_REDUCEDDATAMODEL_H_
+
+#include "PWGHF/DataModel/CandidateReconstructionTables.h"
+#include "PWGHF/Utils/utilsEvSelHf.h"
+#include "PWGHF/Utils/utilsPid.h"
+
+#include "Common/Core/RecoDecay.h"
+#include "Common/DataModel/Centrality.h"
+#include "Common/DataModel/EventSelection.h"
+#include "Common/DataModel/PIDResponseTOF.h"
+#include "Common/DataModel/PIDResponseTPC.h"
+#include "Common/DataModel/Qvectors.h"
+
+#include <CommonConstants/MathConstants.h>
+#include <CommonConstants/PhysicsConstants.h>
+#include <Framework/ASoA.h>
+#include <Framework/AnalysisDataModel.h>
+
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+
+namespace o2::aod
+{
+DECLARE_SOA_TABLE(HfCandDpFullEvs, "AOD", "HFCANDDPFULLEV",
+                  collision::NumContrib,
+                  collision::PosX,
+                  collision::PosY,
+                  collision::PosZ);
+
+namespace hf_pair_reduced
+{
+DECLARE_SOA_COLUMN(RSecondaryVertex, rSecondaryVertex, float);                     //! Radius of secondary vertex (cm)
+DECLARE_SOA_COLUMN(PtProng0, ptProng0, float);                                     //! Transverse momentum of prong0 (GeV/c)
+DECLARE_SOA_COLUMN(PProng0, pProng0, float);                                       //! Momentum of prong0 (GeV/c)
+DECLARE_SOA_COLUMN(ImpactParameterNormalised0, impactParameterNormalised0, float); //! Normalised impact parameter of prong0
+DECLARE_SOA_COLUMN(PtProng1, ptProng1, float);                                     //! Transverse momentum of prong1 (GeV/c)
+DECLARE_SOA_COLUMN(PProng1, pProng1, float);                                       //! Momentum of prong1 (in GeV/c)
+DECLARE_SOA_COLUMN(ImpactParameterNormalised1, impactParameterNormalised1, float); //! Normalised impact parameter of prong1
+DECLARE_SOA_COLUMN(PtProng2, ptProng2, float);                                     //! Transverse momentum of prong2 (GeV/c)
+DECLARE_SOA_COLUMN(PProng2, pProng2, float);                                       //! Momentum of prong2 (GeV/c)
+DECLARE_SOA_COLUMN(ImpactParameterNormalised2, impactParameterNormalised2, float); //! Normalised impact parameter of prong2
+DECLARE_SOA_COLUMN(CandidateSelFlag, candidateSelFlag, int);                       //! Selection flag of candidate (output of candidateSelector)
+DECLARE_SOA_COLUMN(M, m, float);                                                   //! Invariant mass of candidate (GeV/c2)
+DECLARE_SOA_COLUMN(Pt, pt, float);                                                 //! Transverse momentum of candidate (GeV/c)
+DECLARE_SOA_COLUMN(P, p, float);                                                   //! Momentum of candidate (GeV/c)
+DECLARE_SOA_COLUMN(Y, y, float);                                                   //! Rapidity of candidate
+DECLARE_SOA_COLUMN(Eta, eta, float);                                               //! Pseudorapidity of candidate
+DECLARE_SOA_COLUMN(Phi, phi, float);                                               //! Azimuth angle of candidate
+DECLARE_SOA_COLUMN(E, e, float);                                                   //! Energy of candidate (GeV)
+DECLARE_SOA_COLUMN(Centrality, centrality, float);                                 //! Collision centrality
+DECLARE_SOA_INDEX_COLUMN(HfCandDpFullEv, hfCandDpFullEv);                          //! The collision index this candidate belongs to
+DECLARE_SOA_COLUMN(NSigTpcPi0, nSigTpcPi0, float);                                 //! TPC Nsigma separation for prong0 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcKa0, nSigTpcKa0, float);                                 //! TPC Nsigma separation for prong0 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTofPi0, nSigTofPi0, float);                                 //! TOF Nsigma separation for prong0 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTofKa0, nSigTofKa0, float);                                 //! TOF Nsigma separation for prong0 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcPi1, nSigTpcPi1, float);                                 //! TPC Nsigma separation for prong1 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcKa1, nSigTpcKa1, float);                                 //! TPC Nsigma separation for prong1 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTofPi1, nSigTofPi1, float);                                 //! TOF Nsigma separation for prong1 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTofKa1, nSigTofKa1, float);                                 //! TOF Nsigma separation for prong1 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcPi2, nSigTpcPi2, float);                                 //! TPC Nsigma separation for prong2 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcKa2, nSigTpcKa2, float);                                 //! TPC Nsigma separation for prong2 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTofPi2, nSigTofPi2, float);                                 //! TOF Nsigma separation for prong2 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTofKa2, nSigTofKa2, float);                                 //! TOF Nsigma separation for prong2 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcTofPi0, nSigTpcTofPi0, float);                           //! TPC and TOF combined Nsigma separation for prong0 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcTofKa0, nSigTpcTofKa0, float);                           //! TPC and TOF combined Nsigma separation for prong0 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcTofPi1, nSigTpcTofPi1, float);                           //! TPC and TOF combined Nsigma separation for prong1 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcTofKa1, nSigTpcTofKa1, float);                           //! TPC and TOF combined Nsigma separation for prong1 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcTofPi2, nSigTpcTofPi2, float);                           //! TPC and TOF combined Nsigma separation for prong2 with pion mass hypothesis
+DECLARE_SOA_COLUMN(NSigTpcTofKa2, nSigTpcTofKa2, float);                           //! TPC and TOF combined Nsigma separation for prong2 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(DecayLength, decayLength, float);                               //! Decay length of candidate (cm)
+DECLARE_SOA_COLUMN(DecayLengthXY, decayLengthXY, float);                           //! Transverse decay length of candidate (cm)
+DECLARE_SOA_COLUMN(DecayLengthNormalised, decayLengthNormalised, float);           //! Normalised decay length of candidate
+DECLARE_SOA_COLUMN(DecayLengthXYNormalised, decayLengthXYNormalised, float);       //! Normalised transverse decay length of candidate
+DECLARE_SOA_COLUMN(Cpa, cpa, float);                                               //! Cosine pointing angle of candidate
+DECLARE_SOA_COLUMN(CpaXY, cpaXY, float);                                           //! Cosine pointing angle of candidate in transverse plane
+DECLARE_SOA_COLUMN(MaxNormalisedDeltaIP, maxNormalisedDeltaIP, float);             //! Maximum normalized difference between measured and expected impact parameter of candidate prongs
+DECLARE_SOA_COLUMN(Ct, ct, float);                                                 //! Proper lifetime times c of candidate (cm)
+// Events
+DECLARE_SOA_COLUMN(IsEventReject, isEventReject, int); //! Event rejection flag
+DECLARE_SOA_COLUMN(RunNumber, runNumber, int);         //! Run number
+// ML scores
+DECLARE_SOA_COLUMN(MlScore0, mlScore0, float); //! ML score of the first configured index
+DECLARE_SOA_COLUMN(MlScore1, mlScore1, float); //! ML score of the second configured index
+} // namespace hf_pair_reduced
+DECLARE_SOA_TABLE(HfCandDpMls, "AOD", "HFCANDDPML",
+                  hf_pair_reduced::MlScore0,
+                  hf_pair_reduced::MlScore1)
+
+DECLARE_SOA_TABLE(HfCandDpLites, "AOD", "HFCANDDPLITE",
+                  hf_cand::Chi2PCA,
+                  hf_pair_reduced::DecayLength,
+                  hf_pair_reduced::DecayLengthXY,
+                  hf_pair_reduced::DecayLengthNormalised,
+                  hf_pair_reduced::DecayLengthXYNormalised,
+                  hf_pair_reduced::PtProng0,
+                  hf_pair_reduced::PtProng1,
+                  hf_pair_reduced::PtProng2,
+                  hf_cand::ImpactParameter0,
+                  hf_cand::ImpactParameter1,
+                  hf_cand::ImpactParameter2,
+                  hf_cand::ImpactParameterZ0,
+                  hf_cand::ImpactParameterZ1,
+                  hf_cand::ImpactParameterZ2,
+                  hf_pair_reduced::NSigTpcPi0,
+                  hf_pair_reduced::NSigTpcKa0,
+                  hf_pair_reduced::NSigTofPi0,
+                  hf_pair_reduced::NSigTofKa0,
+                  hf_pair_reduced::NSigTpcTofPi0,
+                  hf_pair_reduced::NSigTpcTofKa0,
+                  hf_pair_reduced::NSigTpcPi1,
+                  hf_pair_reduced::NSigTpcKa1,
+                  hf_pair_reduced::NSigTofPi1,
+                  hf_pair_reduced::NSigTofKa1,
+                  hf_pair_reduced::NSigTpcTofPi1,
+                  hf_pair_reduced::NSigTpcTofKa1,
+                  hf_pair_reduced::NSigTpcPi2,
+                  hf_pair_reduced::NSigTpcKa2,
+                  hf_pair_reduced::NSigTofPi2,
+                  hf_pair_reduced::NSigTofKa2,
+                  hf_pair_reduced::NSigTpcTofPi2,
+                  hf_pair_reduced::NSigTpcTofKa2,
+                  hf_pair_reduced::CandidateSelFlag,
+                  hf_pair_reduced::M,
+                  hf_pair_reduced::Pt,
+                  hf_pair_reduced::Cpa,
+                  hf_pair_reduced::CpaXY,
+                  hf_pair_reduced::MaxNormalisedDeltaIP,
+                  hf_pair_reduced::Eta,
+                  hf_pair_reduced::Phi,
+                  hf_pair_reduced::Y,
+                  hf_pair_reduced::Centrality,
+                  collision::NumContrib,
+                  hf_pair_reduced::HfCandDpFullEvId,
+                  hf_cand_3prong::FlagMcMatchRec,
+                  hf_cand_3prong::OriginMcRec,
+                  hf_cand_3prong::FlagMcDecayChanRec)
+
+DECLARE_SOA_TABLE(HfCandDpFulls, "AOD", "HFCANDDPFULL",
+                  collision::NumContrib,
+                  collision::PosX,
+                  collision::PosY,
+                  collision::PosZ,
+                  hf_cand::XSecondaryVertex,
+                  hf_cand::YSecondaryVertex,
+                  hf_cand::ZSecondaryVertex,
+                  hf_cand::ErrorDecayLength,
+                  hf_cand::ErrorDecayLengthXY,
+                  hf_cand::Chi2PCA,
+                  hf_pair_reduced::RSecondaryVertex,
+                  hf_pair_reduced::DecayLength,
+                  hf_pair_reduced::DecayLengthXY,
+                  hf_pair_reduced::DecayLengthNormalised,
+                  hf_pair_reduced::DecayLengthXYNormalised,
+                  hf_pair_reduced::ImpactParameterNormalised0,
+                  hf_pair_reduced::PtProng0,
+                  hf_pair_reduced::PProng0,
+                  hf_pair_reduced::ImpactParameterNormalised1,
+                  hf_pair_reduced::PtProng1,
+                  hf_pair_reduced::PProng1,
+                  hf_pair_reduced::ImpactParameterNormalised2,
+                  hf_pair_reduced::PtProng2,
+                  hf_pair_reduced::PProng2,
+                  hf_cand::PxProng0,
+                  hf_cand::PyProng0,
+                  hf_cand::PzProng0,
+                  hf_cand::PxProng1,
+                  hf_cand::PyProng1,
+                  hf_cand::PzProng1,
+                  hf_cand::PxProng2,
+                  hf_cand::PyProng2,
+                  hf_cand::PzProng2,
+                  hf_cand::ImpactParameter0,
+                  hf_cand::ImpactParameter1,
+                  hf_cand::ImpactParameter2,
+                  hf_cand::ErrorImpactParameter0,
+                  hf_cand::ErrorImpactParameter1,
+                  hf_cand::ErrorImpactParameter2,
+                  hf_cand::ImpactParameterZ0,
+                  hf_cand::ImpactParameterZ1,
+                  hf_cand::ImpactParameterZ2,
+                  hf_cand::ErrorImpactParameterZ0,
+                  hf_cand::ErrorImpactParameterZ1,
+                  hf_cand::ErrorImpactParameterZ2,
+                  hf_pair_reduced::NSigTpcPi0,
+                  hf_pair_reduced::NSigTpcKa0,
+                  hf_pair_reduced::NSigTofPi0,
+                  hf_pair_reduced::NSigTofKa0,
+                  hf_pair_reduced::NSigTpcTofPi0,
+                  hf_pair_reduced::NSigTpcTofKa0,
+                  hf_pair_reduced::NSigTpcPi1,
+                  hf_pair_reduced::NSigTpcKa1,
+                  hf_pair_reduced::NSigTofPi1,
+                  hf_pair_reduced::NSigTofKa1,
+                  hf_pair_reduced::NSigTpcTofPi1,
+                  hf_pair_reduced::NSigTpcTofKa1,
+                  hf_pair_reduced::NSigTpcPi2,
+                  hf_pair_reduced::NSigTpcKa2,
+                  hf_pair_reduced::NSigTofPi2,
+                  hf_pair_reduced::NSigTofKa2,
+                  hf_pair_reduced::NSigTpcTofPi2,
+                  hf_pair_reduced::NSigTpcTofKa2,
+                  hf_pair_reduced::CandidateSelFlag,
+                  hf_pair_reduced::M,
+                  hf_pair_reduced::Pt,
+                  hf_pair_reduced::P,
+                  hf_pair_reduced::Cpa,
+                  hf_pair_reduced::CpaXY,
+                  hf_pair_reduced::MaxNormalisedDeltaIP,
+                  hf_pair_reduced::Ct,
+                  hf_pair_reduced::Eta,
+                  hf_pair_reduced::Phi,
+                  hf_pair_reduced::Y,
+                  hf_pair_reduced::E,
+                  hf_pair_reduced::Centrality,
+                  hf_pair_reduced::HfCandDpFullEvId,
+                  hf_cand_3prong::FlagMcMatchRec,
+                  hf_cand_3prong::OriginMcRec,
+                  hf_cand_3prong::FlagMcDecayChanRec);
+
+DECLARE_SOA_TABLE(HfCandDpFullPs, "AOD", "HFCANDDPFULLP",
+                  hf_pair_reduced::Pt,
+                  hf_pair_reduced::Eta,
+                  hf_pair_reduced::Phi,
+                  hf_pair_reduced::Y,
+                  hf_cand_3prong::FlagMcMatchGen,
+                  hf_cand_3prong::FlagMcDecayChanGen,
+                  hf_cand_3prong::OriginMcGen);
+} // namespace o2::aod
+
+
+
+#endif // PWGHF_D2H_DATAMODEL_REDUCEDDATAMODEL_H_
