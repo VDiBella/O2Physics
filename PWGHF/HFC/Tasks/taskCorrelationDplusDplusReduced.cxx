@@ -35,7 +35,7 @@ struct HfTreeReaderDplusToPiKPi {
   Configurable<int> selectionFlagDplus{"selectionFlagDplus", 1, "Selection Flag for Dplus"};
 
   using SelectedCandidates = soa::Filtered<o2::aod::HfCandDpFulls>;
-  Filter filterSelectCandidates = aod::full::candidateSelFlag >= selectionFlagDplus;
+  Filter filterSelectCandidates = aod::hf_pair_reduced::candidateSelFlag >= selectionFlagDplus;
 
   HistogramConfigSpec hTH1NCand{HistType::kTH1F, {{7, -0.5, 6.5}}};
   HistogramRegistry registry{
