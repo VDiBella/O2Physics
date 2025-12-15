@@ -260,7 +260,7 @@ struct HfCorrelatorDplusDplusReduced {
     }
   }
 
-  void processDataPerCollision(aod::Collisions const& collisions, SelectedCandidates const& candidates, TracksWPid const&, aod::BCsWithTimestamps const&)
+  void processData(aod::Collisions const& collisions, SelectedCandidates const& candidates, TracksWPid const&, aod::BCsWithTimestamps const&)
   {
     static int lastRunNumber = -1;
     // reserve memory
@@ -293,9 +293,9 @@ struct HfCorrelatorDplusDplusReduced {
       }
     }
   }
-  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processDataPerCollision, "Process data per collision", false);
+  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processData, "Process data per collision", false);
 
-  void processDataPerCollisionMc(aod::Collisions const& collisions,
+  void processMcRec(aod::Collisions const& collisions,
                                  SelectedCandidatesMc const& candidates,
                                  TracksWPid const&, aod::BCsWithTimestamps const&)
   {
@@ -316,7 +316,7 @@ struct HfCorrelatorDplusDplusReduced {
       }
     }
   }
-  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processDataPerCollisionMc, "Process data per collision", false);
+  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMcRec, "Process data per collision", false);
 
   template <bool applyMl = false, typename CandTypeMcRec, typename CandTypeMcGen, typename CollType>
   void fillMcTables(CollType const& collisions,
@@ -361,22 +361,16 @@ struct HfCorrelatorDplusDplusReduced {
     }
   }
 
-  void processMc(aod::Collisions const& collisions,
+  void processMcGen(aod::Collisions const& collisions,
                  aod::McCollisions const& mccollisions,
                  SelectedCandidatesMc const& candidates,
                  MatchedGenCandidatesMc const& particles,
                  TracksWPid const& tracks)
   {
-    if (fillOnlySignal) {
-      fillMcTables(collisions, mccollisions, reconstructedCandSig, particles, tracks);
-    } else if (fillOnlyBackground) {
-      fillMcTables(collisions, mccollisions, reconstructedCandBkg, particles, tracks);
-    } else {
-      fillMcTables(collisions, mccollisions, candidates, particles, tracks);
-    }
+    //to be implemented later on
   }
 
-  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMc, "Process MC", false);
+  PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMcGen, "Process MC", false);
 
 };
 
