@@ -411,15 +411,7 @@ struct HStrangeCorrelationFilter {
 
     // do this only if information is available
     float nSigmaTPCTOF[8] = {-10, -10, -10, -10, -10, -10, -10, -10};
-<<<<<<< HEAD
-<<<<<<< HEAD
     if constexpr (requires { assoc.tofSignal(); } && !requires { assoc.mcParticle(); }) {
-=======
-    if constexpr (requires { assoc.tofSignal(); }) {
->>>>>>> c6b36269af45c84e24cf661aede0359e65f157f0
-=======
-    if constexpr (requires { assoc.tofSignal(); } && !requires { assoc.mcParticle(); }) {
->>>>>>> 036276c65d18406a8d3079cfb0393ffecc3c0a63
       if (assoc.tofSignal() > 0) {
         if (std::sqrt(assoc.tofNSigmaPi() * assoc.tofNSigmaPi() + assoc.tpcNSigmaPi() * assoc.tpcNSigmaPi()) > systCuts.assocPionNSigmaTPCFOF)
           return false;
@@ -451,27 +443,13 @@ struct HStrangeCorrelationFilter {
 
     bool physicalPrimary = false;
     float origPt = -1;
-<<<<<<< HEAD
-<<<<<<< HEAD
     float pdgCode = -9999;
-=======
->>>>>>> c6b36269af45c84e24cf661aede0359e65f157f0
-=======
-    float pdgCode = -9999;
->>>>>>> 036276c65d18406a8d3079cfb0393ffecc3c0a63
     if constexpr (requires { assoc.mcParticle(); }) {
       if (assoc.has_mcParticle()) {
         auto mcParticle = assoc.mcParticle();
         physicalPrimary = mcParticle.isPhysicalPrimary();
         origPt = mcParticle.pt();
-<<<<<<< HEAD
-<<<<<<< HEAD
         pdgCode = mcParticle.pdgCode();
-=======
->>>>>>> c6b36269af45c84e24cf661aede0359e65f157f0
-=======
-        pdgCode = mcParticle.pdgCode();
->>>>>>> 036276c65d18406a8d3079cfb0393ffecc3c0a63
       }
     }
 
@@ -479,17 +457,8 @@ struct HStrangeCorrelationFilter {
       assoc.collisionId(),
       physicalPrimary,
       assoc.globalIndex(),
-<<<<<<< HEAD
-<<<<<<< HEAD
       origPt,
       pdgCode);
-=======
-      origPt);
->>>>>>> c6b36269af45c84e24cf661aede0359e65f157f0
-=======
-      origPt,
-      pdgCode);
->>>>>>> 036276c65d18406a8d3079cfb0393ffecc3c0a63
     assocPID(
       nSigmaTPCTOF[0],
       nSigmaTPCTOF[1],
@@ -621,15 +590,7 @@ struct HStrangeCorrelationFilter {
     }
   }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   void processAssocPionsMC(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision, soa::Filtered<IDTracksMC> const& tracks, aod::McParticles const&, aod::BCsWithTimestamps const&)
-=======
-  void processAssocPionsMC(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision, soa::Filtered<IDTracksMC> const& tracks, aod::BCsWithTimestamps const&)
->>>>>>> c6b36269af45c84e24cf661aede0359e65f157f0
-=======
-  void processAssocPionsMC(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision, soa::Filtered<IDTracksMC> const& tracks, aod::McParticles const&, aod::BCsWithTimestamps const&)
->>>>>>> 036276c65d18406a8d3079cfb0393ffecc3c0a63
   {
     // Load parameters for sideband subtraction
     auto bc = collision.bc_as<aod::BCsWithTimestamps>();
