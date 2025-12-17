@@ -15,27 +15,25 @@
 ///        In this file are defined and filled the output tables
 ///
 /// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
-/// \author Iouri BELIKOV <jouri.belikov@cern.ch>, IPHC Strasbourg 
-/// \author Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
+/// Based on the code of Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
 
-#include "PWGHF/Core/CentralityEstimation.h"
+
 #include "PWGHF/Core/DecayChannels.h"
-#include "PWGHF/DataModel/CandidateReconstructionTables.h"
 
 #include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
 
-#include "Framework/AnalysisTask.h"
+
 #include "Framework/runDataProcessing.h"
 
 using namespace o2;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
 
-struct HfTreeReaderDplusToPiKPi {
+struct HfTaskCorrelationDplusDplusReduced {
   Configurable<int> selectionFlagDplus{"selectionFlagDplus", 1, "Selection Flag for Dplus"};
 
   using SelectedCandidates = soa::Filtered<o2::aod::HfCandDpFulls>;
-  Filter filterSelectCandidates = aod::hf_pair_reduced::candidateSelFlag >= selectionFlagDplus;
+  Filter filterSelectCandidates = aod::full::candidateSelFlag >= selectionFlagDplus;
 
   HistogramConfigSpec hTH1NCand{HistType::kTH1F, {{7, -0.5, 6.5}}};
   HistogramRegistry registry{
@@ -62,7 +60,7 @@ struct HfTreeReaderDplusToPiKPi {
       }
     }
   }
-  PROCESS_SWITCH(HfTreeReaderDplusToPiKPi, processLocalData, "Process local data", true);
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalData, "Process local data", true);
 
   void processLocalDataMc(o2::aod::HfCandDpFullEvs::iterator const& localCollision,
                           SelectedCandidates const& localCandidates)
@@ -76,11 +74,11 @@ struct HfTreeReaderDplusToPiKPi {
         registry.fill(HIST("hMassDplusMatched"), mass1);
     }
   }
-  PROCESS_SWITCH(HfTreeReaderDplusToPiKPi, processLocalDataMc, "Process local MC data", false);
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMc, "Process local MC data", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
   return WorkflowSpec{
-    adaptAnalysisTask<HfTreeReaderDplusToPiKPi>(cfgc)};
+    adaptAnalysisTask<HfTaskCorrelationDplusDplusReduced>(cfgc)};
 }
