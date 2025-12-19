@@ -20,7 +20,6 @@
 
 #include "PWGHF/Core/DecayChannels.h"
 #include "PWGHF/Core/HfHelper.h"
-#include "PWGHF/DataModel/AliasTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 
 #include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
@@ -44,11 +43,7 @@ struct HfCorrelatorDplusDplusReduced {
   Configurable<int> selectionFlagDplus{"selectionFlagDplus", 1, "Selection Flag for Dplus"};
   Configurable<bool> fillCandidateLiteTable{"fillCandidateLiteTable", false, "Switch to fill lite table with candidate properties"};
   // parameters for production of training samples
-  Configurable<bool> fillOnlySignal{"fillOnlySignal", false, "Flag to fill derived tables with signal for ML trainings"};
   Configurable<bool> fillCorrBkgs{"fillCorrBkgs", false, "Flag to fill derived tables with correlated background candidates"};
-  Configurable<bool> fillOnlyBackground{"fillOnlyBackground", false, "Flag to fill derived tables with background for ML trainings"};
-  Configurable<float> downSampleBkgFactor{"downSampleBkgFactor", 1., "Fraction of background candidates to keep for ML trainings"};
-  Configurable<float> ptMaxForDownSample{"ptMaxForDownSample", 10., "Maximum pt for the application of the downsampling factor"};
   Configurable<std::vector<int>> classMlIndexes{"classMlIndexes", {0, 2}, "Indexes of ML bkg and non-prompt scores."};
   Configurable<int> centEstimator{"centEstimator", 0, "Centrality estimation (None: 0, FT0C: 2, FT0M: 3)"};
   Configurable<bool> cfgSkimmedProcessing{"cfgSkimmedProcessing", true, "Enables processing of skimmed datasets"};
@@ -61,7 +56,6 @@ struct HfCorrelatorDplusDplusReduced {
   using SelectedCandidatesMc = soa::Filtered<soa::Join<aod::HfCand3ProngWPidPiKa, aod::HfCand3ProngMcRec, aod::HfSelDplusToPiKPi>>;
   using MatchedGenCandidatesMc = soa::Filtered<soa::Join<aod::McParticles, aod::HfCand3ProngMcGen>>;
   using SelectedCandidatesMcWithMl = soa::Filtered<soa::Join<aod::HfCand3ProngWPidPiKa, aod::HfCand3ProngMcRec, aod::HfSelDplusToPiKPi, aod::HfMlDplusToPiKPi>>;
-  using TracksWPid = soa::Join<aod::Tracks, aod::TracksPidPi, aod::PidTpcTofFullPi, aod::TracksPidKa, aod::PidTpcTofFullKa>;
   using CollisionsCent = soa::Join<aod::Collisions, aod::CentFT0Cs, aod::CentFT0Ms>;
 
   Filter filterSelectCandidates = aod::hf_sel_candidate_dplus::isSelDplusToPiKPi >= selectionFlagDplus;
@@ -177,10 +171,6 @@ struct HfCorrelatorDplusDplusReduced {
         channelMc);
     } else {
       rowCandidateFull(
-        coll.numContrib(),
-        candidate.posX(),
-        candidate.posY(),
-        candidate.posZ(),
         candidate.xSecondaryVertex(),
         candidate.ySecondaryVertex(),
         candidate.zSecondaryVertex(),
@@ -260,7 +250,7 @@ struct HfCorrelatorDplusDplusReduced {
     }
   }
 
-  void processData(aod::Collisions const& collisions, SelectedCandidates const& candidates, TracksWPid const&, aod::BCsWithTimestamps const&)
+  void processData(aod::Collisions const& collisions, SelectedCandidates const& candidates)
   {
     static int lastRunNumber = -1;
     // reserve memory
@@ -296,8 +286,7 @@ struct HfCorrelatorDplusDplusReduced {
   PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processData, "Process data per collision", false);
 
   void processMcRec(aod::Collisions const& collisions,
-                                 SelectedCandidatesMc const& candidates,
-                                 TracksWPid const&, aod::BCsWithTimestamps const&)
+                                 SelectedCandidatesMc const& candidates)
   {
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
@@ -318,54 +307,9 @@ struct HfCorrelatorDplusDplusReduced {
   }
   PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMcRec, "Process data per collision", false);
 
-  template <bool applyMl = false, typename CandTypeMcRec, typename CandTypeMcGen, typename CollType>
-  void fillMcTables(CollType const& collisions,
-                    aod::McCollisions const&,
-                    CandTypeMcRec const& candidates,
-                    CandTypeMcGen const& particles,
-                    TracksWPid const&)
-  {
-    // Filling event properties
-    rowCandidateFullEvents.reserve(collisions.size());
-    for (const auto& collision : collisions) {
-      fillEvent(collision);
-    }
 
-    // Filling candidate properties
-    if (fillCandidateLiteTable) {
-      rowCandidateLite.reserve(candidates.size());
-    } else {
-      rowCandidateFull.reserve(candidates.size());
-    }
-    for (const auto& candidate : candidates) {
-      if (downSampleBkgFactor < 1.) {
-        float pseudoRndm = candidate.ptProng0() * 1000. - static_cast<int64_t>(candidate.ptProng0() * 1000);
-        if (candidate.pt() < ptMaxForDownSample && pseudoRndm >= downSampleBkgFactor) {
-          continue;
-        }
-      }
-      fillCandidateTable<CollType, true, applyMl>(candidate);
-    }
-
-    // Filling particle properties
-    rowCandidateFullParticles.reserve(particles.size());
-    for (const auto& particle : particles) {
-      rowCandidateFullParticles(
-        particle.pt(),
-        particle.eta(),
-        particle.phi(),
-        RecoDecay::y(particle.pVector(), o2::constants::physics::MassDPlus),
-        particle.flagMcMatchGen(),
-        particle.flagMcDecayChanGen(),
-        particle.originMcGen());
-    }
-  }
-
-  void processMcGen(aod::Collisions const& collisions,
-                 aod::McCollisions const& mccollisions,
-                 SelectedCandidatesMc const& candidates,
-                 MatchedGenCandidatesMc const& particles,
-                 TracksWPid const& tracks)
+  void processMcGen(aod::McCollisions const& mccollisions,
+                 SelectedCandidatesMc const& candidates)
   {
     //to be implemented later on
   }
