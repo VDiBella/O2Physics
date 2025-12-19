@@ -33,18 +33,26 @@ struct HfTaskCorrelationDplusDplusReduced {
   Configurable<int> selectionFlagDplus{"selectionFlagDplus", 1, "Selection Flag for Dplus"};
 
   using SelectedCandidates = soa::Filtered<o2::aod::HfCandDpFulls>;
+  using SelectedMcParticles = o2::aod::HfCandDpMcPs;
+
   Filter filterSelectCandidates = aod::full::candidateSelFlag >= selectionFlagDplus;
 
   HistogramConfigSpec hTH1NCand{HistType::kTH1F, {{7, -0.5, 6.5}}};
+  HistogramConfigSpec hTH1NMcRec{HistType::kTH1F, {{7, -0.5, 6.5}}};
+  HistogramConfigSpec hTH1NMcGen{HistType::kTH1F, {{7, -0.5, 6.5}}};
   HistogramRegistry registry{
     "registry",
-    {{"hNCand", "Number of D candidates per event;xxxx", hTH1NCand}}};
-
+    {
+      {"hNCand", "Number of D candidates per event;N", hTH1NCand},
+      {"hNMcRec", "Number of reconstructed Mc D mesons per event;N", hTH1NMcRec},
+      {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}
+    };
   void init(InitContext const&)
   {
     registry.add("hMassDplus", "D+ candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
     registry.add("hMassDplusMatched", "D+ matched candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
     registry.add("hMassDMesonPair", "D Meson pair candidates;inv. mass (#pi K) (GeV/#it{c}^{2});inv. mass (#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hDltPhiMcGen", "Azimuthal correlation for D mesons; #Delta#phi", {HistType::kTH1F, {{100, -3.141593, 3.141593}}});
   }
 
   void processLocalData(o2::aod::HfCandDpFullEvs::iterator const& localCollision,
@@ -62,10 +70,10 @@ struct HfTaskCorrelationDplusDplusReduced {
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalData, "Process local data", true);
 
-  void processLocalDataMc(o2::aod::HfCandDpFullEvs::iterator const& localCollision,
+  void processLocalDataMcRec(o2::aod::HfCandDpFullEvs::iterator const& localCollision,
                           SelectedCandidates const& localCandidates)
   {
-    registry.fill(HIST("hNCand"), localCandidates.size());
+    registry.fill(HIST("hNMcRec"), localCandidates.size());
 
     for (const auto& cand1 : localCandidates) {
       auto mass1 = cand1.m();
@@ -74,8 +82,23 @@ struct HfTaskCorrelationDplusDplusReduced {
         registry.fill(HIST("hMassDplusMatched"), mass1);
     }
   }
-  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMc, "Process local MC data", false);
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRec, "Process local MC data", false);
 };
+
+
+  void processLocalDataMcGen(o2::aod::HfCandDpMcEvs::iterator const& localMcCollision,
+                          SelectedMcParticles const& localMcParticles)
+  {
+    registry.fill(HIST("hNMcGen"), localMcParticles.size());
+
+    for (const auto& part1 : localMcParticles) {
+      for (auto part2 = part1 + 1; part2 != localMcParticles.end(); ++part2) {
+        registry.fill(HIST("hDltPhiMcGen"), part2.phi()-part1.phi());	
+      }
+    }
+  }
+PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcGen, "Process local MC data at the gen level", false);
+
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
 {
