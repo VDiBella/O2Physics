@@ -281,7 +281,7 @@ struct HfCorrelatorDplusDplusReduced {
       const auto colId = collision.globalIndex();
       auto candidatesInThisCollision = candidates.sliceBy(tracksPerCollision, colId);
       if (skipSingleD)
-        if (candidatesInThisCollision.size() < 2) //o2-linter: disable=magic-number (number of candidate must be larger than 1)
+        if (candidatesInThisCollision.size() < 2) // o2-linter: disable=magic-number (number of candidate must be larger than 1)
           continue;
       fillEvent(collision);
       for (const auto& candidate : candidatesInThisCollision) {
@@ -306,7 +306,7 @@ struct HfCorrelatorDplusDplusReduced {
       const auto colId = collision.globalIndex();
       auto candidatesInThisCollision = candidates.sliceBy(tracksPerCollision, colId);
       if (skipSingleD)
-        if (candidatesInThisCollision.size() < 2) //o2-linter: disable=magic-number (number of candidate must be larger than 1)
+        if (candidatesInThisCollision.size() < 2) // o2-linter: disable=magic-number (number of candidate must be larger than 1)
           continue;
       fillEvent(collision);
       for (const auto& candidate : candidatesInThisCollision) {
@@ -326,7 +326,7 @@ struct HfCorrelatorDplusDplusReduced {
       const auto colId = mccollision.globalIndex();
       const auto particlesInThisCollision = mcparticles.sliceBy(mcParticlesPerMcCollision, colId);
       if (skipSingleD)
-        if (particlesInThisCollision.size() < 2) //o2-linter: disable=magic-number (number of candidate must be larger than 1)
+        if (particlesInThisCollision.size() < 2) // o2-linter: disable=magic-number (number of candidate must be larger than 1)
           continue;
       rowCandidateMcCollisions(
         mccollision.posX(),
