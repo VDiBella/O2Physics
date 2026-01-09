@@ -231,6 +231,4 @@ DECLARE_SOA_TABLE(HfCandDpMcPs, "AOD", "HFCANDDPMCP",
                   hf_cand_3prong::OriginMcGen);
 } // namespace o2::aod
 
-
-
 #endif // PWGHF_D2H_DATAMODEL_REDUCEDMESONPAIRSTABLES_H_

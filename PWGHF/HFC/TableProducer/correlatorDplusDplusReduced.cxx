@@ -17,15 +17,12 @@
 /// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
 /// Based on the code of Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
 
-
 #include "PWGHF/Core/DecayChannels.h"
 #include "PWGHF/Core/HfHelper.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
-
 #include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
 
 #include <Framework/runDataProcessing.h>
-
 
 using namespace o2;
 using namespace o2::framework;
@@ -282,7 +279,8 @@ struct HfCorrelatorDplusDplusReduced {
       const auto colId = collision.globalIndex();
       auto candidatesInThisCollision = candidates.sliceBy(tracksPerCollision, colId);
       if (skipSingleD)
-      if (candidatesInThisCollision.size()<2) continue;
+        if (candidatesInThisCollision.size() < 2)
+          continue;
       fillEvent(collision);
       for (const auto& candidate : candidatesInThisCollision) {
         fillCandidateTable<aod::Collisions>(candidate, rowCandidateFullEvents.lastIndex());
@@ -292,7 +290,7 @@ struct HfCorrelatorDplusDplusReduced {
   PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processData, "Process data per collision", false);
 
   void processMcRec(aod::Collisions const& collisions,
-                                 SelectedCandidatesMc const& candidates)
+                    SelectedCandidatesMc const& candidates)
   {
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
@@ -306,7 +304,8 @@ struct HfCorrelatorDplusDplusReduced {
       const auto colId = collision.globalIndex();
       auto candidatesInThisCollision = candidates.sliceBy(tracksPerCollision, colId);
       if (skipSingleD)
-      if (candidatesInThisCollision.size()<2) continue;
+        if (candidatesInThisCollision.size() < 2)
+          continue;
       fillEvent(collision);
       for (const auto& candidate : candidatesInThisCollision) {
         fillCandidateTable<aod::Collisions, true>(candidate, rowCandidateFullEvents.lastIndex());
@@ -314,7 +313,6 @@ struct HfCorrelatorDplusDplusReduced {
     }
   }
   PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMcRec, "Process data per collision", false);
-
 
   void processMcGen(aod::McCollisions const& mccollisions, MatchedGenCandidatesMc const& mcparticles)
   {
@@ -326,11 +324,12 @@ struct HfCorrelatorDplusDplusReduced {
       const auto colId = mccollision.globalIndex();
       const auto particlesInThisCollision = mcparticles.sliceBy(mcParticlesPerMcCollision, colId);
       if (skipSingleD)
-      if (particlesInThisCollision.size()<2) continue;
+        if (particlesInThisCollision.size() < 2)
+          continue;
       rowCandidateMcCollisions(
-      mccollision.posX(),
-      mccollision.posY(),
-      mccollision.posZ());
+        mccollision.posX(),
+        mccollision.posY(),
+        mccollision.posZ());
       for (const auto& particle : particlesInThisCollision) {
         rowCandidateMcParticles(
           particle.pt(),
@@ -345,7 +344,6 @@ struct HfCorrelatorDplusDplusReduced {
     }
   }
   PROCESS_SWITCH(HfCorrelatorDplusDplusReduced, processMcGen, "Process MC data at the generator level", false);
-
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)

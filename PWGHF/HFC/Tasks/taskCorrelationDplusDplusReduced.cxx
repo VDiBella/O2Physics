@@ -17,11 +17,8 @@
 /// \author Valerio DI BELLA <valerio.di.bella@cern.ch>, IPHC Strasbourg
 /// Based on the code of Alexandre Bigot <alexandre.bigot@cern.ch>, IPHC Strasbourg
 
-
 #include "PWGHF/Core/DecayChannels.h"
-
 #include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
-
 
 #include "Framework/runDataProcessing.h"
 
@@ -42,11 +39,9 @@ struct HfTaskCorrelationDplusDplusReduced {
   HistogramConfigSpec hTH1NMcGen{HistType::kTH1F, {{7, -0.5, 6.5}}};
   HistogramRegistry registry{
     "registry",
-    {
-      {"hNCand", "Number of D candidates per event;N", hTH1NCand},
-      {"hNMcRec", "Number of reconstructed Mc D mesons per event;N", hTH1NMcRec},
-      {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}
-    };
+    {{"hNCand", "Number of D candidates per event;N", hTH1NCand},
+     {"hNMcRec", "Number of reconstructed Mc D mesons per event;N", hTH1NMcRec},
+     {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}};
   void init(InitContext const&)
   {
     registry.add("hMassDplus", "D+ candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
@@ -71,7 +66,7 @@ struct HfTaskCorrelationDplusDplusReduced {
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalData, "Process local data", true);
 
   void processLocalDataMcRec(o2::aod::HfCandDpFullEvs::iterator const& localCollision,
-                          SelectedCandidates const& localCandidates)
+                             SelectedCandidates const& localCandidates)
   {
     registry.fill(HIST("hNMcRec"), localCandidates.size());
 
@@ -84,19 +79,18 @@ struct HfTaskCorrelationDplusDplusReduced {
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRec, "Process local MC data", false);
 
-
   void processLocalDataMcGen(o2::aod::HfCandDpMcEvs::iterator const& localMcCollision,
-                          SelectedMcParticles const& localMcParticles)
+                             SelectedMcParticles const& localMcParticles)
   {
     registry.fill(HIST("hNMcGen"), localMcParticles.size());
 
     for (const auto& part1 : localMcParticles) {
       for (auto part2 = part1 + 1; part2 != localMcParticles.end(); ++part2) {
-        registry.fill(HIST("hDltPhiMcGen"), part2.phi()-part1.phi());
+        registry.fill(HIST("hDltPhiMcGen"), part2.phi() - part1.phi());
       }
     }
   }
-PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcGen, "Process local MC data at the gen level", false);
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcGen, "Process local MC data at the gen level", false);
 };
 
 WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
