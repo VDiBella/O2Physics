@@ -37,6 +37,10 @@ using namespace o2::framework::expressions;
 
 struct HfTaskCorrelationDplusDplusReduced {
   Configurable<int> selectionFlagDplus{"selectionFlagDplus", 1, "Selection Flag for Dplus"};
+  Configurable<double> selectionCutRapidity{"selectionCutRapidity", 1, "Selection the cut of rapidity"};
+  
+  Configurable<bool> applyMl{"applyMl", false, "Flag to apply ML selections"};
+  Configurable<bool> applySkimming{"applySkimming", false, "Flag to apply Skimming selections"};
 
   using SelectedCandidates = soa::Filtered<o2::aod::HfCandDpTinys>;
   using SelectedMcParticles = o2::aod::HfCandDpMcPs;
@@ -54,13 +58,16 @@ struct HfTaskCorrelationDplusDplusReduced {
 
   void init(InitContext const&)
   {
-    registry.add("hMassDplus", "D+ candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
-    registry.add("hMassDminus", "D- candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
-    registry.add("hMassDplusMatched", "D+ matched candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
-    registry.add("hMassDminusMatched", "D- matched candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
-    registry.add("hMassDplusminusPair", "D plus-minus pair candidates;inv. mass (#pi K) (GeV/#it{c}^{2});inv. mass (#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
-    registry.add("hMassDplusPair", "D plus pair candidates;inv. mass (#pi K) (GeV/#it{c}^{2});inv. mass (#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
-    registry.add("hMassDminusPair", "D minus pair candidates;inv. mass (#pi K) (GeV/#it{c}^{2});inv. mass (#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDplus", "D^{+} candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
+    registry.add("hMassDminus", "D^{-} candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
+    registry.add("hMassDplusMatched", "D^{+} matched candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
+    registry.add("hMassDminusMatched", "D^{-} matched candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2}))", {HistType::kTH1F, {{120, 1.5848, 2.1848}}});
+    registry.add("hMassDplusPairsMatched", "D^{+} matched pairs candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2});inv. mass (#pi#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDminusPairsMatched", "D^{-} matched pairs candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2});inv. mass (#pi#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDplusminusPairsMatched", "D^{+} and D^{-} matched pairs candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2});inv. mass (#pi#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDplusminusPair", "D^{+-} pair candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2});inv. mass (#pi#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDplusPair", "D^{+} pair candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2});inv. mass (#pi#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
+    registry.add("hMassDminusPair", "D^{-} pair candidates;inv. mass (#pi#pi K) (GeV/#it{c}^{2});inv. mass (#pi#pi K) (GeV/#it{c}^{2})", {HistType::kTH2F, {{120, 1.5848, 2.1848}, {120, 1.5848, 2.1848}}});
     registry.add("hDltPhiMcGen", "Azimuthal correlation for D mesons; #Delta#phi", {HistType::kTH1F, {{100, -3.141593, 3.141593}}});
   }
 
@@ -72,6 +79,7 @@ struct HfTaskCorrelationDplusDplusReduced {
     for (const auto& cand1 : localCandidates) {
       auto mass1 = cand1.m();
       auto sign1 = 1;
+      auto flattening = 0;
       if (cand1.pt() < 0) {
         sign1 = -1;
         registry.fill(HIST("hMassDminus"), mass1);
@@ -85,14 +93,29 @@ struct HfTaskCorrelationDplusDplusReduced {
         if (cand2.pt() < 0) {
           sign2 = -1;
         }
-        if (sign1 == sign2) {
-          if (sign1 == 1) {
-            registry.fill(HIST("hMassDplusPair"), mass2, mass1);
+        if (flattening == 0) {
+          if (sign1 == sign2) {
+            if (sign1 == 1) {
+              registry.fill(HIST("hMassDplusPair"), mass2, mass1);
+            } else {
+              registry.fill(HIST("hMassDminusPair"), mass2, mass1);
+            }
           } else {
-            registry.fill(HIST("hMassDminusPair"), mass2, mass1);
+            registry.fill(HIST("hMassDplusminusPair"), mass2, mass1);
           }
-        } else {
-          registry.fill(HIST("hMassDplusminusPair"), mass2, mass1);
+          flattening = 1;
+        }
+        if (flattening == 1) {
+          if (sign1 == sign2) {
+            if (sign1 == 1) {
+              registry.fill(HIST("hMassDplusPair"), mass1, mass2);
+            } else {
+              registry.fill(HIST("hMassDminusPair"), mass1, mass2);
+            }
+          } else {
+            registry.fill(HIST("hMassDplusminusPair"), mass1, mass2);
+          }
+          flattening = 0;
         }
       }
     }
@@ -106,7 +129,10 @@ struct HfTaskCorrelationDplusDplusReduced {
 
     for (const auto& cand1 : localCandidates) {
       auto mass1 = cand1.m();
+      auto sign1 = 1;
+      auto flattening = 0;
       if (cand1.pt() < 0) {
+        sign1 = -1;
         registry.fill(HIST("hMassDminus"), mass1);
         if (std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
           registry.fill(HIST("hMassDminusMatched"), mass1);
@@ -114,6 +140,50 @@ struct HfTaskCorrelationDplusDplusReduced {
         registry.fill(HIST("hMassDplus"), mass1);
         if (std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
           registry.fill(HIST("hMassDplusMatched"), mass1);
+      }
+
+       for (auto cand2 = cand1 + 1; cand2 != localCandidates.end(); ++cand2) {
+        auto mass2 = cand2.m();
+        auto sign2 = 1;
+        if (cand2.pt() < 0) {
+          sign2 = -1;
+        }
+        if (flattening == 0) {
+          if (sign1 == sign2) {
+            if (sign1 == 1) {
+              registry.fill(HIST("hMassDplusPair"), mass1, mass2);
+              if (std::abs(cand2.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi && std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
+                registry.fill(HIST("hMassDplusPairsMatched"), mass1, mass2);
+            } else {
+              registry.fill(HIST("hMassDminusPair"), mass1, mass2);
+              if (std::abs(cand2.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi && std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
+                registry.fill(HIST("hMassDminusPairsMatched"), mass1, mass2);
+            }
+          } else {
+            registry.fill(HIST("hMassDplusminusPair"), mass1, mass2);
+            if (std::abs(cand2.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi && std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
+              registry.fill(HIST("hMassDplusminusPairsMatched"), mass1, mass2);
+          }
+          flattening = 1;
+        }
+        if (flattening == 1) {
+          if (sign1 == sign2) {
+            if (sign1 == 1) {
+              registry.fill(HIST("hMassDplusPair"), mass2, mass1);
+              if (std::abs(cand2.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi && std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
+                registry.fill(HIST("hMassDplusPairsMatched"), mass2, mass1);
+            } else {
+              registry.fill(HIST("hMassDminusPair"), mass2, mass1);
+              if (std::abs(cand2.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi && std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
+                registry.fill(HIST("hMassDminusPairsMatched"), mass2, mass1);
+            }
+          } else {
+            registry.fill(HIST("hMassDplusminusPair"), mass2, mass1);
+            if (std::abs(cand2.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi && std::abs(cand1.flagMcMatchRec()) == hf_decay::hf_cand_3prong::DecayChannelMain::DplusToPiKPi)
+              registry.fill(HIST("hMassDplusminusPairsMatched"), mass2, mass1);
+          }
+          flattening = 0;
+        }
       }
     }
   }
@@ -126,7 +196,9 @@ struct HfTaskCorrelationDplusDplusReduced {
 
     for (const auto& part1 : localMcParticles) {
       for (auto part2 = part1 + 1; part2 != localMcParticles.end(); ++part2) {
+        if (part1.eta() < selectionCutRapidity && part2.eta() < selectionCutRapidity) {
         registry.fill(HIST("hDltPhiMcGen"), part2.phi() - part1.phi());
+        }
       }
     }
   }
