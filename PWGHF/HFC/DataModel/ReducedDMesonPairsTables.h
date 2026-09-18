@@ -39,7 +39,7 @@ DECLARE_SOA_TABLE(HfCandDpMcEvs, "AOD", "HFCANDDPMCEV",
 namespace full
 {
 DECLARE_SOA_INDEX_COLUMN_FULL(HfCandDpFullEv, hfCandDpFullEv, int32_t, HfCandDpFullEvs, "");
-DECLARE_SOA_INDEX_COLUMN_FULL(HfCandDpFullEvMC, hfCandDpFullEvMC, int32_t, HfCandDpMcEvs, "");
+DECLARE_SOA_INDEX_COLUMN_FULL(HfCandDpMcEv, hfCandDpFullEvMC, int32_t, HfCandDpMcEvs, "");
 DECLARE_SOA_COLUMN(RSecondaryVertex, rSecondaryVertex, float);                     //! Radius of secondary vertex (cm)
 DECLARE_SOA_COLUMN(PtProng0, ptProng0, float);                                     //! Transverse momentum of prong0 (GeV/c)
 DECLARE_SOA_COLUMN(PProng0, pProng0, float);                                       //! Momentum of prong0 (GeV/c)
@@ -59,8 +59,6 @@ DECLARE_SOA_COLUMN(Eta, eta, float);                                            
 DECLARE_SOA_COLUMN(Phi, phi, float);                                               //! Azimuth angle of candidate
 DECLARE_SOA_COLUMN(E, e, float);                                                   //! Energy of candidate (GeV)
 DECLARE_SOA_COLUMN(Centrality, centrality, float);                                 //! Collision centrality
-DECLARE_SOA_INDEX_COLUMN(HfCandDpMcEv, hfCandDpMcEv);                              //! The Mc collision index this MC particles belongs to
-DECLARE_SOA_INDEX_COLUMN(HfCandDpFullEv, hfCandDpFullEv);                          //! The collision index this candidate belongs to
 DECLARE_SOA_COLUMN(NSigTpcPi0, nSigTpcPi0, float);                                 //! TPC Nsigma separation for prong0 with pion mass hypothesis
 DECLARE_SOA_COLUMN(NSigTpcKa0, nSigTpcKa0, float);                                 //! TPC Nsigma separation for prong0 with kaon mass hypothesis
 DECLARE_SOA_COLUMN(NSigTofPi0, nSigTofPi0, float);                                 //! TOF Nsigma separation for prong0 with pion mass hypothesis

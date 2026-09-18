@@ -43,6 +43,9 @@
 #include <cstdint>
 #include <vector>
 
+#include "PWGHF/Core/HfMlResponseDplusToPiKPi.h"
+#include "PWGHF/Core/SelectorCuts.h"
+
 using namespace o2;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
@@ -82,6 +85,8 @@ struct HfCorrelatorDplusDplusReduced {
   Configurable<int64_t> timestampCCDB{"timestampCCDB", -1, "timestamp of the ONNX file for ML model used to query in CCDB"};
   Configurable<std::vector<std::string>> namesInputFeatures{"namesInputFeatures", std::vector<std::string>{"feature1", "feature2"}, "Names of ML model input features"};
 
+  Configurable<std::vector<double>> binsPtSkimming{"binsPtSkimming", std::vector<double>{0}, "pT bin limits for Skimming application"};
+  
 
   HfHelper hfHelper;
 
@@ -346,6 +351,14 @@ struct HfCorrelatorDplusDplusReduced {
       for (const auto& candidate : candidatesInThisCollision) {
         auto prongCandidate = candidate.prong1_as<aod::Tracks>();
         auto candidateSign = -prongCandidate.sign();
+
+        if (applyMl) {
+          std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
+          bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
+          if (!isSelectedMl) {
+            continue;
+          }
+        }
         fillCandidateTable<aod::Collisions>(candidate, rowCandidateFullEvents.lastIndex(), candidateSign);
       }
     }
