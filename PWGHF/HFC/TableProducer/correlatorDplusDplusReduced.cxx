@@ -75,10 +75,10 @@ struct HfCorrelatorDplusDplusReduced {
   Configurable<bool> applyMl{"applyMl", false, "Flag to apply ML selections"};
   Configurable<bool> applySkimming{"applySkimming", false, "Flag to apply Skimming selections"};
   Configurable<bool> loadModelsFromCCDB{"loadModelsFromCCDB", false, "Flag to enable or disable the loading of models from CCDB"};
-  Configurable<std::vector<double>> binsPtMl{"binsPtMl", std::vector<double>{hf_cuts_ml::vecBinsPt}, "pT bin limits for ML application"};
-  Configurable<std::vector<int>> cutDirMl{"cutDirMl", std::vector<int>{hf_cuts_ml::vecCutDir}, "Whether to reject score values greater or smaller than the threshold"};
-  Configurable<LabeledArray<double>> cutsMl{"cutsMl", {hf_cuts_ml::Cuts[0], hf_cuts_ml::NBinsPt, hf_cuts_ml::NCutScores, hf_cuts_ml::labelsPt, hf_cuts_ml::labelsCutScore}, "ML selections per pT bin"};
-  Configurable<int> nClassesMl{"nClassesMl", static_cast<int>(hf_cuts_ml::NCutScores), "Number of classes in ML model"};
+  // Configurable<std::vector<double>> binsPtMl{"binsPtMl", std::vector<double>{hf_cuts_ml::vecBinsPt}, "pT bin limits for ML application"};
+  // Configurable<std::vector<int>> cutDirMl{"cutDirMl", std::vector<int>{hf_cuts_ml::vecCutDir}, "Whether to reject score values greater or smaller than the threshold"};
+  // Configurable<LabeledArray<double>> cutsMl{"cutsMl", {hf_cuts_ml::Cuts[0], hf_cuts_ml::NBinsPt, hf_cuts_ml::NCutScores, hf_cuts_ml::labelsPt, hf_cuts_ml::labelsCutScore}, "ML selections per pT bin"};
+  // Configurable<int> nClassesMl{"nClassesMl", static_cast<int>(hf_cuts_ml::NCutScores), "Number of classes in ML model"};
   Configurable<std::string> ccdbUrl{"ccdbUrl", "http://alice-ccdb.cern.ch", "url of the ccdb repository"};
   Configurable<std::vector<std::string>> modelPathsCCDB{"modelPathsCCDB", std::vector<std::string>{"EventFiltering/PWGHF/BDTDPlus"}, "Paths of models on CCDB"};
   Configurable<std::vector<std::string>> onnxFileNames{"onnxFileNames", std::vector<std::string>{"ModelHandler_onnx_DPlusToKPiPi.onnx"}, "ONNX file names for each pT bin (if not from CCDB full path)"};
@@ -123,15 +123,15 @@ struct HfCorrelatorDplusDplusReduced {
     }
 
     if (applyMl) {
-      hfMlResponse.configure(binsPtMl, cutsMl, cutDirMl, nClassesMl);
-      if (loadModelsFromCCDB) {
-        ccdbApi.init(ccdbUrl);
-        hfMlResponse.setModelPathsCCDB(onnxFileNames, ccdbApi, modelPathsCCDB, timestampCCDB);
-      } else {
-        hfMlResponse.setModelPathsLocal(onnxFileNames);
-      }
-      hfMlResponse.cacheInputFeaturesIndices(namesInputFeatures);
-      hfMlResponse.init();
+    //   hfMlResponse.configure(binsPtMl, cutsMl, cutDirMl, nClassesMl);
+    //   if (loadModelsFromCCDB) {
+    //     ccdbApi.init(ccdbUrl);
+    //     hfMlResponse.setModelPathsCCDB(onnxFileNames, ccdbApi, modelPathsCCDB, timestampCCDB);
+    //   } else {
+    //     hfMlResponse.setModelPathsLocal(onnxFileNames);
+    //   }
+    //   hfMlResponse.cacheInputFeaturesIndices(namesInputFeatures);
+    //   hfMlResponse.init();
     }
   }
 
@@ -353,11 +353,11 @@ struct HfCorrelatorDplusDplusReduced {
         auto candidateSign = -prongCandidate.sign();
 
         if (applyMl) {
-          std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
-          bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
-          if (!isSelectedMl) {
-            continue;
-          }
+          // std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
+          // bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
+          // if (!isSelectedMl) {
+          //   continue;
+          // }
         }
         fillCandidateTable<aod::Collisions>(candidate, rowCandidateFullEvents.lastIndex(), candidateSign);
       }
@@ -388,11 +388,11 @@ struct HfCorrelatorDplusDplusReduced {
         auto prongCandidate = candidate.prong1_as<aod::Tracks>();
         auto candidateSign = -prongCandidate.sign();
         if (applyMl) {
-          std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
-          bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
-          if (!isSelectedMl) {
-            continue;
-          }
+          // std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
+          // bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
+          // if (!isSelectedMl) {
+          //   continue;
+          // }
         }
         fillCandidateTable<aod::Collisions, true>(candidate, rowCandidateFullEvents.lastIndex(), candidateSign);
       }
