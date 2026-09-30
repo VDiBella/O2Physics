@@ -37,6 +37,7 @@
 #include <Framework/Configurable.h>
 #include <Framework/Expressions.h>
 #include <Framework/HistogramRegistry.h>
+#include <Framework/HistogramSpec.h>
 #include <Framework/InitContext.h>
 #include <Framework/runDataProcessing.h>
 
@@ -47,6 +48,7 @@
 #include "PWGHF/Core/SelectorCuts.h"
 
 using namespace o2;
+using namespace o2::analysis;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
 using namespace o2::hf_centrality;
@@ -75,18 +77,30 @@ struct HfCorrelatorDplusDplusReduced {
   Configurable<bool> applyMl{"applyMl", false, "Flag to apply ML selections"};
   Configurable<bool> applySkimming{"applySkimming", false, "Flag to apply Skimming selections"};
   Configurable<bool> loadModelsFromCCDB{"loadModelsFromCCDB", false, "Flag to enable or disable the loading of models from CCDB"};
-  // Configurable<std::vector<double>> binsPtMl{"binsPtMl", std::vector<double>{hf_cuts_ml::vecBinsPt}, "pT bin limits for ML application"};
-  // Configurable<std::vector<int>> cutDirMl{"cutDirMl", std::vector<int>{hf_cuts_ml::vecCutDir}, "Whether to reject score values greater or smaller than the threshold"};
-  // Configurable<LabeledArray<double>> cutsMl{"cutsMl", {hf_cuts_ml::Cuts[0], hf_cuts_ml::NBinsPt, hf_cuts_ml::NCutScores, hf_cuts_ml::labelsPt, hf_cuts_ml::labelsCutScore}, "ML selections per pT bin"};
-  // Configurable<int> nClassesMl{"nClassesMl", static_cast<int>(hf_cuts_ml::NCutScores), "Number of classes in ML model"};
+  Configurable<std::vector<double>> binsPtMl{"binsPtMl", std::vector<double>{hf_cuts_ml::vecBinsPt}, "pT bin limits for ML application"};
+  Configurable<std::vector<int>> cutDirMl{"cutDirMl", std::vector<int>{hf_cuts_ml::vecCutDir}, "Whether to reject score values greater or smaller than the threshold"};
+  Configurable<LabeledArray<double>> cutsMl{"cutsMl", {hf_cuts_ml::Cuts[0], hf_cuts_ml::NBinsPt, hf_cuts_ml::NCutScores, hf_cuts_ml::labelsPt, hf_cuts_ml::labelsCutScore}, "ML selections per pT bin"};
+  Configurable<int> nClassesMl{"nClassesMl", static_cast<int>(hf_cuts_ml::NCutScores), "Number of classes in ML model"};
   Configurable<std::string> ccdbUrl{"ccdbUrl", "http://alice-ccdb.cern.ch", "url of the ccdb repository"};
   Configurable<std::vector<std::string>> modelPathsCCDB{"modelPathsCCDB", std::vector<std::string>{"EventFiltering/PWGHF/BDTDPlus"}, "Paths of models on CCDB"};
   Configurable<std::vector<std::string>> onnxFileNames{"onnxFileNames", std::vector<std::string>{"ModelHandler_onnx_DPlusToKPiPi.onnx"}, "ONNX file names for each pT bin (if not from CCDB full path)"};
   Configurable<int64_t> timestampCCDB{"timestampCCDB", -1, "timestamp of the ONNX file for ML model used to query in CCDB"};
   Configurable<std::vector<std::string>> namesInputFeatures{"namesInputFeatures", std::vector<std::string>{"feature1", "feature2"}, "Names of ML model input features"};
-
-  Configurable<std::vector<double>> binsPtSkimming{"binsPtSkimming", std::vector<double>{0}, "pT bin limits for Skimming application"};
   
+  Configurable<std::vector<double>> cutPtSkimming{"cutPtSkimming", {1,5,1000}, "pT bin limits for Skimming application"};
+  Configurable<std::vector<double>> minM{"minM", {0.7,0.7}, "Mass minimal for the cut for each pt bin"};
+  Configurable<std::vector<double>> maxM{"maxM", {2.0,2.1}, "Mass maximal for the cut for each pt bin"};
+  Configurable<std::vector<double>> minCosTheta{"minCosTheta", {0.96,0.98}, "CosTheta minimal for the cut for each pt bin"};
+  Configurable<std::vector<double>> minDecayLength{"minDecayLength", {0.02,0.03}, "DecayLength minimal for the cut for each pt bin"};
+  Configurable<std::vector<double>> maxNsigmaTPC{"maxNsigmaTPC", {3,3}, "NsigmaTPC maximal for the cut for each pt bin"};
+  Configurable<std::vector<double>> maxNsigmaTOF{"maxNsigmaTOF", {3,3}, "NsigmaTOF maximal for the cut for each pt bin"};
+
+  Configurable<std::vector<double>> binsPtSkimming{"binsPtSkimming", {0}, "pT bin limits for Skimming application"};
+
+  HfMlResponseDplusToPiKPi<float> hfMlResponse;
+
+  std::vector<float> outputMl;
+  o2::ccdb::CcdbApi ccdbApi;
 
   HfHelper hfHelper;
 
@@ -118,21 +132,52 @@ struct HfCorrelatorDplusDplusReduced {
     ccdb->setCaching(true);
     ccdb->setLocalObjectValidityChecking();
 
+
+    
     if (cfgSkimmedProcessing) {
       zorroSummary.setObject(zorro.getZorroSummary());
     }
 
     if (applyMl) {
-    //   hfMlResponse.configure(binsPtMl, cutsMl, cutDirMl, nClassesMl);
-    //   if (loadModelsFromCCDB) {
-    //     ccdbApi.init(ccdbUrl);
-    //     hfMlResponse.setModelPathsCCDB(onnxFileNames, ccdbApi, modelPathsCCDB, timestampCCDB);
-    //   } else {
-    //     hfMlResponse.setModelPathsLocal(onnxFileNames);
-    //   }
-    //   hfMlResponse.cacheInputFeaturesIndices(namesInputFeatures);
-    //   hfMlResponse.init();
+      hfMlResponse.configure(binsPtMl, cutsMl, cutDirMl, nClassesMl);
+      if (loadModelsFromCCDB) {
+        ccdbApi.init(ccdbUrl);
+        hfMlResponse.setModelPathsCCDB(onnxFileNames, ccdbApi, modelPathsCCDB, timestampCCDB);
+      } else {
+        hfMlResponse.setModelPathsLocal(onnxFileNames);
+      }
+      hfMlResponse.cacheInputFeaturesIndices(namesInputFeatures);
+      hfMlResponse.init();
     }
+  }
+
+
+  bool Skimming(auto candidate,
+    std::vector<double>PtcutSkimming,
+    std::vector<double>Mmin,
+    std::vector<double>Mmax,
+    std::vector<double>CosThetamin,
+    std::vector<double>DecayLengthmin,
+    std::vector<double>NsigmaTPCmax,
+    std::vector<double>NsigmaTOFmax)
+  {
+    if (candidate.pt() < PtcutSkimming[0] || candidate.pt() > PtcutSkimming[PtcutSkimming.size()-1]) {
+      return false;
+    }
+    for (long unsigned int i = 1; i < PtcutSkimming.size(); i++) {
+      if (candidate.pt() <= PtcutSkimming[i]) {
+        if (hfHelper.invMassDplusToPiKPi(candidate) < Mmin[i-1] || 
+        hfHelper.invMassDplusToPiKPi(candidate) > Mmax[i-1] || 
+        candidate.cpa() < CosThetamin[i-1] ||
+        candidate.decayLength() < DecayLengthmin[i-1] ||
+        candidate.nSigTofKa1() > NsigmaTOFmax[i-1] ||
+        candidate.nSigTpcKa1() > NsigmaTPCmax[i-1]) {
+          return false;
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   template <typename T>
@@ -322,7 +367,10 @@ struct HfCorrelatorDplusDplusReduced {
     static int lastRunNumber = -1;
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
-    if (fillCandidateLiteTable) {
+    if (fillCandidateTinyTable) {
+      rowCandidateTiny.reserve(candidates.size());
+    }
+    else if (fillCandidateLiteTable) {
       rowCandidateLite.reserve(candidates.size());
     } else {
       rowCandidateFull.reserve(candidates.size());
@@ -352,12 +400,25 @@ struct HfCorrelatorDplusDplusReduced {
         auto prongCandidate = candidate.prong1_as<aod::Tracks>();
         auto candidateSign = -prongCandidate.sign();
 
+        if (applySkimming &&
+            !Skimming(candidate, 
+            cutPtSkimming,
+            minM,
+            maxM,
+            minCosTheta,
+            minDecayLength,
+            maxNsigmaTPC,
+            maxNsigmaTOF)) 
+            {
+              continue;
+            }
+
         if (applyMl) {
-          // std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
-          // bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
-          // if (!isSelectedMl) {
-          //   continue;
-          // }
+          std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
+          bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
+          if (!isSelectedMl) {
+            continue;
+          }
         }
         fillCandidateTable<aod::Collisions>(candidate, rowCandidateFullEvents.lastIndex(), candidateSign);
       }
@@ -371,7 +432,10 @@ struct HfCorrelatorDplusDplusReduced {
   {
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
-    if (fillCandidateLiteTable) {
+    if (fillCandidateTinyTable) {
+      rowCandidateTiny.reserve(candidates.size());
+    }
+    else if (fillCandidateLiteTable) {
       rowCandidateLite.reserve(candidates.size());
     } else {
       rowCandidateFull.reserve(candidates.size());
@@ -387,12 +451,25 @@ struct HfCorrelatorDplusDplusReduced {
       for (const auto& candidate : candidatesInThisCollision) {
         auto prongCandidate = candidate.prong1_as<aod::Tracks>();
         auto candidateSign = -prongCandidate.sign();
+
+        if (applySkimming &&
+            !Skimming(candidate, 
+            cutPtSkimming,
+            minM,
+            maxM,
+            minCosTheta,
+            minDecayLength,
+            maxNsigmaTPC,
+            maxNsigmaTOF)) 
+            {
+              continue;
+            }
         if (applyMl) {
-          // std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
-          // bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
-          // if (!isSelectedMl) {
-          //   continue;
-          // }
+          std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
+          bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
+          if (!isSelectedMl) {
+            continue;
+          }
         }
         fillCandidateTable<aod::Collisions, true>(candidate, rowCandidateFullEvents.lastIndex(), candidateSign);
       }

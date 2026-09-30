@@ -42,7 +42,9 @@ struct HfTaskCorrelationDplusDplusReduced {
   Configurable<bool> applyMl{"applyMl", false, "Flag to apply ML selections"};
   Configurable<bool> applySkimming{"applySkimming", false, "Flag to apply Skimming selections"};
 
-  using SelectedCandidates = soa::Filtered<o2::aod::HfCandDpTinys>;
+  using SelectedCandidatesTiny = soa::Filtered<o2::aod::HfCandDpTinys>;
+  using SelectedCandidatesLite = soa::Filtered<o2::aod::HfCandDpLites>;
+  using SelectedCandidatesFull = soa::Filtered<o2::aod::HfCandDpFulls>;
   using SelectedMcParticles = o2::aod::HfCandDpMcPs;
 
   Filter filterSelectCandidates = aod::full::candidateSelFlag >= selectionFlagDplus;
@@ -54,7 +56,8 @@ struct HfTaskCorrelationDplusDplusReduced {
     "registry",
     {{"hNCand", "Number of D candidates per event;N", hTH1NCand},
      {"hNMcRec", "Number of reconstructed Mc D mesons per event;N", hTH1NMcRec},
-     {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}};
+     {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}
+  };
 
   void init(InitContext const&)
   {
@@ -71,8 +74,8 @@ struct HfTaskCorrelationDplusDplusReduced {
     registry.add("hDltPhiMcGen", "Azimuthal correlation for D mesons; #Delta#phi", {HistType::kTH1F, {{100, -3.141593, 3.141593}}});
   }
 
-  void processLocalData(o2::aod::HfCandDpFullEvs::iterator const&,
-                        SelectedCandidates const& localCandidates)
+  template <typename T>
+  void processData(const T& localCandidates)
   {
     registry.fill(HIST("hNCand"), localCandidates.size());
 
@@ -120,11 +123,9 @@ struct HfTaskCorrelationDplusDplusReduced {
       }
     }
   }
-  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalData, "Process local data", true);
 
-  void processLocalDataMcRec(o2::aod::HfCandDpFullEvs::iterator const&,
-                             SelectedCandidates const& localCandidates)
-  {
+  template <typename T>
+  void processLocalDataMcRec(const T& localCandidates) {
     registry.fill(HIST("hNMcRec"), localCandidates.size());
 
     for (const auto& cand1 : localCandidates) {
@@ -185,9 +186,51 @@ struct HfTaskCorrelationDplusDplusReduced {
           flattening = 0;
         }
       }
-    }
+    }}
+
+
+
+  void processLocalDataTiny(o2::aod::HfCandDpFullEvs::iterator const&,
+                        SelectedCandidatesTiny const& localCandidates)
+  {
+    processData(localCandidates);
   }
-  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRec, "Process local MC data", false);
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataTiny, "Process local data for Tiny", true);
+
+  void processLocalDataLite(o2::aod::HfCandDpFullEvs::iterator const&,
+                        SelectedCandidatesLite const& localCandidates)
+  {
+    processData(localCandidates);
+  }
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataLite, "Process local data for Lite", true);
+
+  void processLocalDataFull(o2::aod::HfCandDpFullEvs::iterator const&,
+                        SelectedCandidatesFull const& localCandidates)
+  {
+    processData(localCandidates);
+  }
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataFull, "Process local data for Full", true);
+
+  void processLocalDataMcRecTiny(o2::aod::HfCandDpFullEvs::iterator const&,
+                             SelectedCandidatesTiny const& localCandidates)
+  {
+    processLocalDataMcRec(localCandidates);
+  }
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRecTiny, "Process local MC data for Tiny", false);
+
+  void processLocalDataMcRecLite(o2::aod::HfCandDpFullEvs::iterator const&,
+                             SelectedCandidatesLite const& localCandidates)
+  {
+    processLocalDataMcRec(localCandidates);
+  }
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRecLite, "Process local MC data for Lite", false);
+
+  void processLocalDataMcRecFull(o2::aod::HfCandDpFullEvs::iterator const&,
+                             SelectedCandidatesFull const& localCandidates)
+  {
+    processLocalDataMcRec(localCandidates);
+  }
+  PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRecFull, "Process local MC data for Full", false);
 
   void processLocalDataMcGen(o2::aod::HfCandDpMcEvs::iterator const&,
                              SelectedMcParticles const& localMcParticles)

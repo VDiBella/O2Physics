@@ -71,12 +71,12 @@ DECLARE_SOA_COLUMN(NSigTpcPi2, nSigTpcPi2, float);                              
 DECLARE_SOA_COLUMN(NSigTpcKa2, nSigTpcKa2, float);                                 //! TPC Nsigma separation for prong2 with kaon mass hypothesis
 DECLARE_SOA_COLUMN(NSigTofPi2, nSigTofPi2, float);                                 //! TOF Nsigma separation for prong2 with pion mass hypothesis
 DECLARE_SOA_COLUMN(NSigTofKa2, nSigTofKa2, float);                                 //! TOF Nsigma separation for prong2 with kaon mass hypothesis
-DECLARE_SOA_COLUMN(TPCTofNSigmaPi0, tpcTofNSigmaPi0, float);                           //! TPC and TOF combined Nsigma separation for prong0 with pion mass hypothesis
-DECLARE_SOA_COLUMN(TPCTofNSigmaKa0, tpcTofNSigmaKa0, float);                           //! TPC and TOF combined Nsigma separation for prong0 with kaon mass hypothesis
-DECLARE_SOA_COLUMN(TPCTofNSigmaPi1, tpcTofNSigmaPi1, float);                           //! TPC and TOF combined Nsigma separation for prong1 with pion mass hypothesis
-DECLARE_SOA_COLUMN(TPCTofNSigmaKa1, tpcTofNSigmaKa1, float);                           //! TPC and TOF combined Nsigma separation for prong1 with kaon mass hypothesis
-DECLARE_SOA_COLUMN(TPCTofNSigmaPi2, tpcTofNSigmaPi2, float);                           //! TPC and TOF combined Nsigma separation for prong2 with pion mass hypothesis
-DECLARE_SOA_COLUMN(TPCTofNSigmaKa2, tpcTofNSigmaKa2, float);                           //! TPC and TOF combined Nsigma separation for prong2 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(TPCTofNSigmaPi0, tpcTofNSigmaPi0, float);                       //! TPC and TOF combined Nsigma separation for prong0 with pion mass hypothesis
+DECLARE_SOA_COLUMN(TPCTofNSigmaKa0, tpcTofNSigmaKa0, float);                       //! TPC and TOF combined Nsigma separation for prong0 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(TPCTofNSigmaPi1, tpcTofNSigmaPi1, float);                       //! TPC and TOF combined Nsigma separation for prong1 with pion mass hypothesis
+DECLARE_SOA_COLUMN(TPCTofNSigmaKa1, tpcTofNSigmaKa1, float);                       //! TPC and TOF combined Nsigma separation for prong1 with kaon mass hypothesis
+DECLARE_SOA_COLUMN(TPCTofNSigmaPi2, tpcTofNSigmaPi2, float);                       //! TPC and TOF combined Nsigma separation for prong2 with pion mass hypothesis
+DECLARE_SOA_COLUMN(TPCTofNSigmaKa2, tpcTofNSigmaKa2, float);                       //! TPC and TOF combined Nsigma separation for prong2 with kaon mass hypothesis
 DECLARE_SOA_COLUMN(DecayLength, decayLength, float);                               //! Decay length of candidate (cm)
 DECLARE_SOA_COLUMN(DecayLengthXY, decayLengthXY, float);                           //! Transverse decay length of candidate (cm)
 DECLARE_SOA_COLUMN(DecayLengthNormalised, decayLengthNormalised, float);           //! Normalised decay length of candidate
@@ -86,11 +86,11 @@ DECLARE_SOA_COLUMN(CpaXY, cpaXY, float);                                        
 DECLARE_SOA_COLUMN(MaxNormalisedDeltaIP, maxNormalisedDeltaIP, float);             //! Maximum normalized difference between measured and expected impact parameter of candidate prongs
 DECLARE_SOA_COLUMN(Ct, ct, float);                                                 //! Proper lifetime times c of candidate (cm)
 // Events
-DECLARE_SOA_COLUMN(IsEventReject, isEventReject, int); //! Event rejection flag
-DECLARE_SOA_COLUMN(RunNumber, runNumber, int);         //! Run number
+DECLARE_SOA_COLUMN(IsEventReject, isEventReject, int);                             //! Event rejection flag
+DECLARE_SOA_COLUMN(RunNumber, runNumber, int);                                     //! Run number
 // ML scores
-DECLARE_SOA_COLUMN(MlScore0, mlScore0, float); //! ML score of the first configured index
-DECLARE_SOA_COLUMN(MlScore1, mlScore1, float); //! ML score of the second configured index
+DECLARE_SOA_COLUMN(MlScore0, mlScore0, float);                                     //! ML score of the first configured index
+DECLARE_SOA_COLUMN(MlScore1, mlScore1, float);                                     //! ML score of the second configured index
 } // namespace full
 DECLARE_SOA_TABLE(HfCandDpMls, "AOD", "HFCANDDPML",
                   full::MlScore0,
