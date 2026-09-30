@@ -44,9 +44,9 @@
 #include <Framework/InitContext.h>
 #include <Framework/runDataProcessing.h>
 
-#include <string>
 #include <cstdint>
 #include <cstdlib>
+#include <string>
 #include <vector>
 
 using namespace o2;

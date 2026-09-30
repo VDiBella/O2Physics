@@ -55,8 +55,7 @@ struct HfTaskCorrelationDplusDplusReduced {
     "registry",
     {{"hNCand", "Number of D candidates per event;N", hTH1NCand},
      {"hNMcRec", "Number of reconstructed Mc D mesons per event;N", hTH1NMcRec},
-     {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}
-  };
+     {"hNMcGen", "Number of generated Mc D mesons per event;N", hTH1NMcGen}}};
 
   void init(InitContext const&)
   {
@@ -124,7 +123,8 @@ struct HfTaskCorrelationDplusDplusReduced {
   }
 
   template <typename T>
-  void processLocalDataMcRec(const T& localCandidates) {
+  void processLocalDataMcRec(const T& localCandidates)
+  {
     registry.fill(HIST("hNMcRec"), localCandidates.size());
 
     for (const auto& cand1 : localCandidates) {
@@ -142,7 +142,7 @@ struct HfTaskCorrelationDplusDplusReduced {
           registry.fill(HIST("hMassDplusMatched"), mass1);
       }
 
-       for (auto cand2 = cand1 + 1; cand2 != localCandidates.end(); ++cand2) {
+      for (auto cand2 = cand1 + 1; cand2 != localCandidates.end(); ++cand2) {
         auto mass2 = cand2.m();
         auto sign2 = 1;
         if (cand2.pt() < 0) {
@@ -185,47 +185,46 @@ struct HfTaskCorrelationDplusDplusReduced {
           flattening = 0;
         }
       }
-    }}
-
-
+    }
+  }
 
   void processLocalDataTiny(o2::aod::HfCandDpFullEvs::iterator const&,
-                        SelectedCandidatesTiny const& localCandidates)
+                            SelectedCandidatesTiny const& localCandidates)
   {
     processData(localCandidates);
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataTiny, "Process local data for Tiny", true);
 
   void processLocalDataLite(o2::aod::HfCandDpFullEvs::iterator const&,
-                        SelectedCandidatesLite const& localCandidates)
+                            SelectedCandidatesLite const& localCandidates)
   {
     processData(localCandidates);
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataLite, "Process local data for Lite", true);
 
   void processLocalDataFull(o2::aod::HfCandDpFullEvs::iterator const&,
-                        SelectedCandidatesFull const& localCandidates)
+                            SelectedCandidatesFull const& localCandidates)
   {
     processData(localCandidates);
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataFull, "Process local data for Full", true);
 
   void processLocalDataMcRecTiny(o2::aod::HfCandDpFullEvs::iterator const&,
-                             SelectedCandidatesTiny const& localCandidates)
+                                 SelectedCandidatesTiny const& localCandidates)
   {
     processLocalDataMcRec(localCandidates);
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRecTiny, "Process local MC data for Tiny", false);
 
   void processLocalDataMcRecLite(o2::aod::HfCandDpFullEvs::iterator const&,
-                             SelectedCandidatesLite const& localCandidates)
+                                 SelectedCandidatesLite const& localCandidates)
   {
     processLocalDataMcRec(localCandidates);
   }
   PROCESS_SWITCH(HfTaskCorrelationDplusDplusReduced, processLocalDataMcRecLite, "Process local MC data for Lite", false);
 
   void processLocalDataMcRecFull(o2::aod::HfCandDpFullEvs::iterator const&,
-                             SelectedCandidatesFull const& localCandidates)
+                                 SelectedCandidatesFull const& localCandidates)
   {
     processLocalDataMcRec(localCandidates);
   }
@@ -239,7 +238,7 @@ struct HfTaskCorrelationDplusDplusReduced {
     for (const auto& part1 : localMcParticles) {
       for (auto part2 = part1 + 1; part2 != localMcParticles.end(); ++part2) {
         if (part1.eta() < selectionCutRapidity && part2.eta() < selectionCutRapidity) {
-        registry.fill(HIST("hDltPhiMcGen"), part2.phi() - part1.phi());
+          registry.fill(HIST("hDltPhiMcGen"), part2.phi() - part1.phi());
         }
       }
     }
