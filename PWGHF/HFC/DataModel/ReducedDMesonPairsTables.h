@@ -22,6 +22,7 @@
 
 #include <Framework/ASoA.h>
 #include <Framework/AnalysisDataModel.h>
+#include <cstdint>
 
 namespace o2::aod
 {
@@ -86,11 +87,11 @@ DECLARE_SOA_COLUMN(CpaXY, cpaXY, float);                                        
 DECLARE_SOA_COLUMN(MaxNormalisedDeltaIP, maxNormalisedDeltaIP, float);             //! Maximum normalized difference between measured and expected impact parameter of candidate prongs
 DECLARE_SOA_COLUMN(Ct, ct, float);                                                 //! Proper lifetime times c of candidate (cm)
 // Events
-DECLARE_SOA_COLUMN(IsEventReject, isEventReject, int);                             //! Event rejection flag
-DECLARE_SOA_COLUMN(RunNumber, runNumber, int);                                     //! Run number
+DECLARE_SOA_COLUMN(IsEventReject, isEventReject, int); //! Event rejection flag
+DECLARE_SOA_COLUMN(RunNumber, runNumber, int);         //! Run number
 // ML scores
-DECLARE_SOA_COLUMN(MlScore0, mlScore0, float);                                     //! ML score of the first configured index
-DECLARE_SOA_COLUMN(MlScore1, mlScore1, float);                                     //! ML score of the second configured index
+DECLARE_SOA_COLUMN(MlScore0, mlScore0, float); //! ML score of the first configured index
+DECLARE_SOA_COLUMN(MlScore1, mlScore1, float); //! ML score of the second configured index
 } // namespace full
 DECLARE_SOA_TABLE(HfCandDpMls, "AOD", "HFCANDDPML",
                   full::MlScore0,

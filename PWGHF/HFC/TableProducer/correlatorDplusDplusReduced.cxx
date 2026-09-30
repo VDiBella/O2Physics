@@ -20,6 +20,8 @@
 #include "PWGHF/Core/CentralityEstimation.h"
 #include "PWGHF/Core/DecayChannels.h"
 #include "PWGHF/Core/HfHelper.h"
+#include "PWGHF/Core/HfMlResponseDplusToPiKPi.h"
+#include "PWGHF/Core/SelectorCuts.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 #include "PWGHF/HFC/DataModel/ReducedDMesonPairsTables.h"
@@ -30,22 +32,21 @@
 #include "Common/DataModel/Centrality.h"
 
 #include <CCDB/BasicCCDBManager.h>
+#include <CCDB/CcdbApi.h>
 #include <Framework/ASoA.h>
 #include <Framework/AnalysisDataModel.h>
 #include <Framework/AnalysisHelpers.h>
 #include <Framework/AnalysisTask.h>
+#include <Framework/Array2D.h>
 #include <Framework/Configurable.h>
 #include <Framework/Expressions.h>
 #include <Framework/HistogramRegistry.h>
-#include <Framework/HistogramSpec.h>
 #include <Framework/InitContext.h>
 #include <Framework/runDataProcessing.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
-
-#include "PWGHF/Core/HfMlResponseDplusToPiKPi.h"
-#include "PWGHF/Core/SelectorCuts.h"
 
 using namespace o2;
 using namespace o2::analysis;
@@ -86,14 +87,14 @@ struct HfCorrelatorDplusDplusReduced {
   Configurable<std::vector<std::string>> onnxFileNames{"onnxFileNames", std::vector<std::string>{"ModelHandler_onnx_DPlusToKPiPi.onnx"}, "ONNX file names for each pT bin (if not from CCDB full path)"};
   Configurable<int64_t> timestampCCDB{"timestampCCDB", -1, "timestamp of the ONNX file for ML model used to query in CCDB"};
   Configurable<std::vector<std::string>> namesInputFeatures{"namesInputFeatures", std::vector<std::string>{"feature1", "feature2"}, "Names of ML model input features"};
-  
-  Configurable<std::vector<double>> cutPtSkimming{"cutPtSkimming", {1,5,1000}, "pT bin limits for Skimming application"};
-  Configurable<std::vector<double>> minM{"minM", {0.7,0.7}, "Mass minimal for the cut for each pt bin"};
-  Configurable<std::vector<double>> maxM{"maxM", {2.0,2.1}, "Mass maximal for the cut for each pt bin"};
-  Configurable<std::vector<double>> minCosTheta{"minCosTheta", {0.96,0.98}, "CosTheta minimal for the cut for each pt bin"};
-  Configurable<std::vector<double>> minDecayLength{"minDecayLength", {0.02,0.03}, "DecayLength minimal for the cut for each pt bin"};
-  Configurable<std::vector<double>> maxNsigmaTPC{"maxNsigmaTPC", {3,3}, "NsigmaTPC maximal for the cut for each pt bin"};
-  Configurable<std::vector<double>> maxNsigmaTOF{"maxNsigmaTOF", {3,3}, "NsigmaTOF maximal for the cut for each pt bin"};
+
+  Configurable<std::vector<double>> cutPtSkimming{"cutPtSkimming", {1, 5, 1000}, "pT bin limits for Skimming application"};
+  Configurable<std::vector<double>> minM{"minM", {0.7, 0.7}, "Mass minimal for the cut for each pt bin"};
+  Configurable<std::vector<double>> maxM{"maxM", {2.0, 2.1}, "Mass maximal for the cut for each pt bin"};
+  Configurable<std::vector<double>> minCosTheta{"minCosTheta", {0.96, 0.98}, "CosTheta minimal for the cut for each pt bin"};
+  Configurable<std::vector<double>> minDecayLength{"minDecayLength", {0.02, 0.03}, "DecayLength minimal for the cut for each pt bin"};
+  Configurable<std::vector<double>> maxNsigmaTPC{"maxNsigmaTPC", {3, 3}, "NsigmaTPC maximal for the cut for each pt bin"};
+  Configurable<std::vector<double>> maxNsigmaTOF{"maxNsigmaTOF", {3, 3}, "NsigmaTOF maximal for the cut for each pt bin"};
 
   Configurable<std::vector<double>> binsPtSkimming{"binsPtSkimming", {0}, "pT bin limits for Skimming application"};
 
@@ -132,8 +133,6 @@ struct HfCorrelatorDplusDplusReduced {
     ccdb->setCaching(true);
     ccdb->setLocalObjectValidityChecking();
 
-
-    
     if (cfgSkimmedProcessing) {
       zorroSummary.setObject(zorro.getZorroSummary());
     }
@@ -151,27 +150,26 @@ struct HfCorrelatorDplusDplusReduced {
     }
   }
 
-
   bool Skimming(auto candidate,
-    std::vector<double>PtcutSkimming,
-    std::vector<double>Mmin,
-    std::vector<double>Mmax,
-    std::vector<double>CosThetamin,
-    std::vector<double>DecayLengthmin,
-    std::vector<double>NsigmaTPCmax,
-    std::vector<double>NsigmaTOFmax)
+                std::vector<double> PtcutSkimming,
+                std::vector<double> Mmin,
+                std::vector<double> Mmax,
+                std::vector<double> CosThetamin,
+                std::vector<double> DecayLengthmin,
+                std::vector<double> NsigmaTPCmax,
+                std::vector<double> NsigmaTOFmax)
   {
-    if (candidate.pt() < PtcutSkimming[0] || candidate.pt() > PtcutSkimming[PtcutSkimming.size()-1]) {
+    if (candidate.pt() < PtcutSkimming[0] || candidate.pt() > PtcutSkimming[PtcutSkimming.size() - 1]) {
       return false;
     }
     for (long unsigned int i = 1; i < PtcutSkimming.size(); i++) {
       if (candidate.pt() <= PtcutSkimming[i]) {
-        if (hfHelper.invMassDplusToPiKPi(candidate) < Mmin[i-1] || 
-        hfHelper.invMassDplusToPiKPi(candidate) > Mmax[i-1] || 
-        candidate.cpa() < CosThetamin[i-1] ||
-        candidate.decayLength() < DecayLengthmin[i-1] ||
-        candidate.nSigTofKa1() > NsigmaTOFmax[i-1] ||
-        candidate.nSigTpcKa1() > NsigmaTPCmax[i-1]) {
+        if (hfHelper.invMassDplusToPiKPi(candidate) < Mmin[i - 1] ||
+            hfHelper.invMassDplusToPiKPi(candidate) > Mmax[i - 1] ||
+            candidate.cpa() < CosThetamin[i - 1] ||
+            candidate.decayLength() < DecayLengthmin[i - 1] ||
+            candidate.nSigTofKa1() > NsigmaTOFmax[i - 1] ||
+            candidate.nSigTpcKa1() > NsigmaTPCmax[i - 1]) {
           return false;
         }
         return true;
@@ -369,8 +367,7 @@ struct HfCorrelatorDplusDplusReduced {
     rowCandidateFullEvents.reserve(collisions.size());
     if (fillCandidateTinyTable) {
       rowCandidateTiny.reserve(candidates.size());
-    }
-    else if (fillCandidateLiteTable) {
+    } else if (fillCandidateLiteTable) {
       rowCandidateLite.reserve(candidates.size());
     } else {
       rowCandidateFull.reserve(candidates.size());
@@ -401,17 +398,16 @@ struct HfCorrelatorDplusDplusReduced {
         auto candidateSign = -prongCandidate.sign();
 
         if (applySkimming &&
-            !Skimming(candidate, 
-            cutPtSkimming,
-            minM,
-            maxM,
-            minCosTheta,
-            minDecayLength,
-            maxNsigmaTPC,
-            maxNsigmaTOF)) 
-            {
-              continue;
-            }
+            !Skimming(candidate,
+                      cutPtSkimming,
+                      minM,
+                      maxM,
+                      minCosTheta,
+                      minDecayLength,
+                      maxNsigmaTPC,
+                      maxNsigmaTOF)) {
+          continue;
+        }
 
         if (applyMl) {
           std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
@@ -434,8 +430,7 @@ struct HfCorrelatorDplusDplusReduced {
     rowCandidateFullEvents.reserve(collisions.size());
     if (fillCandidateTinyTable) {
       rowCandidateTiny.reserve(candidates.size());
-    }
-    else if (fillCandidateLiteTable) {
+    } else if (fillCandidateLiteTable) {
       rowCandidateLite.reserve(candidates.size());
     } else {
       rowCandidateFull.reserve(candidates.size());
@@ -453,17 +448,16 @@ struct HfCorrelatorDplusDplusReduced {
         auto candidateSign = -prongCandidate.sign();
 
         if (applySkimming &&
-            !Skimming(candidate, 
-            cutPtSkimming,
-            minM,
-            maxM,
-            minCosTheta,
-            minDecayLength,
-            maxNsigmaTPC,
-            maxNsigmaTOF)) 
-            {
-              continue;
-            }
+            !Skimming(candidate,
+                      cutPtSkimming,
+                      minM,
+                      maxM,
+                      minCosTheta,
+                      minDecayLength,
+                      maxNsigmaTPC,
+                      maxNsigmaTOF)) {
+          continue;
+        }
         if (applyMl) {
           std::vector<float> inputFeatures = hfMlResponse.getInputFeatures(candidate);
           bool const isSelectedMl = hfMlResponse.isSelectedMl(inputFeatures, abs(candidate.pt()), outputMl);
