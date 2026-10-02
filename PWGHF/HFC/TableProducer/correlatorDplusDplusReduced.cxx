@@ -363,13 +363,13 @@ struct HfCorrelatorDplusDplusReduced {
                    aod::Tracks const&,
                    aod::BCsWithTimestamps const&)
   {
-    std::vector<double>SkimmingCutPt = cutPtSkimming;
-    std::vector<double>SkimmingminM = minM;
-    std::vector<double>SkimmingmaxM = maxM;
-    std::vector<double>SkimmingminCosTheta = minCosTheta;
-    std::vector<double>SkimmingminDecayLength = minDecayLength;
-    std::vector<double>SkimmingmaxNsigmaTPC = maxNsigmaTPC;
-    std::vector<double>SkimmingmaxNsigmaTOF = maxNsigmaTOF;
+    std::vector<double> SkimmingCutPt = cutPtSkimming;
+    std::vector<double> SkimmingminM = minM;
+    std::vector<double> SkimmingmaxM = maxM;
+    std::vector<double> SkimmingminCosTheta = minCosTheta;
+    std::vector<double> SkimmingminDecayLength = minDecayLength;
+    std::vector<double> SkimmingmaxNsigmaTPC = maxNsigmaTPC;
+    std::vector<double> SkimmingmaxNsigmaTOF = maxNsigmaTOF;
     static int lastRunNumber = -1;
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
@@ -434,13 +434,13 @@ struct HfCorrelatorDplusDplusReduced {
                     SelectedCandidatesMc const& candidates,
                     aod::Tracks const&)
   {
-    std::vector<double>SkimmingCutPt = cutPtSkimming;
-    std::vector<double>SkimmingminM = minM;
-    std::vector<double>SkimmingmaxM = maxM;
-    std::vector<double>SkimmingminCosTheta = minCosTheta;
-    std::vector<double>SkimmingminDecayLength = minDecayLength;
-    std::vector<double>SkimmingmaxNsigmaTPC = maxNsigmaTPC;
-    std::vector<double>SkimmingmaxNsigmaTOF = maxNsigmaTOF;
+    std::vector<double> SkimmingCutPt = cutPtSkimming;
+    std::vector<double> SkimmingminM = minM;
+    std::vector<double> SkimmingmaxM = maxM;
+    std::vector<double> SkimmingminCosTheta = minCosTheta;
+    std::vector<double> SkimmingminDecayLength = minDecayLength;
+    std::vector<double> SkimmingmaxNsigmaTPC = maxNsigmaTPC;
+    std::vector<double> SkimmingmaxNsigmaTOF = maxNsigmaTOF;
     // reserve memory
     rowCandidateFullEvents.reserve(collisions.size());
     if (fillCandidateTinyTable) {
